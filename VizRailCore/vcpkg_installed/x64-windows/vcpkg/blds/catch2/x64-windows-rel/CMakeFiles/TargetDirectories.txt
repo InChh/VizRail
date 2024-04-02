@@ -1,0 +1,16 @@
+D:/Programming/C++/Projects/VizRail/VizRailCore/vcpkg_installed/x64-windows/vcpkg/blds/catch2/x64-windows-rel/CMakeFiles/package.dir
+D:/Programming/C++/Projects/VizRail/VizRailCore/vcpkg_installed/x64-windows/vcpkg/blds/catch2/x64-windows-rel/CMakeFiles/package_source.dir
+D:/Programming/C++/Projects/VizRail/VizRailCore/vcpkg_installed/x64-windows/vcpkg/blds/catch2/x64-windows-rel/CMakeFiles/edit_cache.dir
+D:/Programming/C++/Projects/VizRail/VizRailCore/vcpkg_installed/x64-windows/vcpkg/blds/catch2/x64-windows-rel/CMakeFiles/rebuild_cache.dir
+D:/Programming/C++/Projects/VizRail/VizRailCore/vcpkg_installed/x64-windows/vcpkg/blds/catch2/x64-windows-rel/CMakeFiles/list_install_components.dir
+D:/Programming/C++/Projects/VizRail/VizRailCore/vcpkg_installed/x64-windows/vcpkg/blds/catch2/x64-windows-rel/CMakeFiles/install.dir
+D:/Programming/C++/Projects/VizRail/VizRailCore/vcpkg_installed/x64-windows/vcpkg/blds/catch2/x64-windows-rel/CMakeFiles/install/local.dir
+D:/Programming/C++/Projects/VizRail/VizRailCore/vcpkg_installed/x64-windows/vcpkg/blds/catch2/x64-windows-rel/src/CMakeFiles/Catch2.dir
+D:/Programming/C++/Projects/VizRail/VizRailCore/vcpkg_installed/x64-windows/vcpkg/blds/catch2/x64-windows-rel/src/CMakeFiles/Catch2WithMain.dir
+D:/Programming/C++/Projects/VizRail/VizRailCore/vcpkg_installed/x64-windows/vcpkg/blds/catch2/x64-windows-rel/src/CMakeFiles/package.dir
+D:/Programming/C++/Projects/VizRail/VizRailCore/vcpkg_installed/x64-windows/vcpkg/blds/catch2/x64-windows-rel/src/CMakeFiles/package_source.dir
+D:/Programming/C++/Projects/VizRail/VizRailCore/vcpkg_installed/x64-windows/vcpkg/blds/catch2/x64-windows-rel/src/CMakeFiles/edit_cache.dir
+D:/Programming/C++/Projects/VizRail/VizRailCore/vcpkg_installed/x64-windows/vcpkg/blds/catch2/x64-windows-rel/src/CMakeFiles/rebuild_cache.dir
+D:/Programming/C++/Projects/VizRail/VizRailCore/vcpkg_installed/x64-windows/vcpkg/blds/catch2/x64-windows-rel/src/CMakeFiles/list_install_components.dir
+D:/Programming/C++/Projects/VizRail/VizRailCore/vcpkg_installed/x64-windows/vcpkg/blds/catch2/x64-windows-rel/src/CMakeFiles/install.dir
+D:/Programming/C++/Projects/VizRail/VizRailCore/vcpkg_installed/x64-windows/vcpkg/blds/catch2/x64-windows-rel/src/CMakeFiles/install/local.dir
