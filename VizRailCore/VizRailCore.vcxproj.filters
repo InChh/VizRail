@@ -19,16 +19,13 @@
     <None Include="vcpkg.json" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="includes\Angle.ixx">
+    <ClCompile Include="includes\Angle.h">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="includes\Convert.ixx">
+    <ClCompile Include="includes\Coordinate.h">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="includes\Coordinate.ixx">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="includes\Curve.ixx">
+    <ClCompile Include="includes\Curve.h">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="src\Curve.cpp">

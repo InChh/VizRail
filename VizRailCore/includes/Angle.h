@@ -1,9 +1,10 @@
-module;
-export module VizRailCore.Angle;
-import <cmath>;
-import <numbers>;
+#pragma once
 
-export namespace VizRailCore
+#include <cmath>
+#include <numbers>
+#include <stdexcept>
+
+namespace VizRailCore
 {
 	class Angle
 	{
@@ -99,6 +100,31 @@ export namespace VizRailCore
 		Angle operator-(const Angle& other) const
 		{
 			return Angle(_value - other._value);
+		}
+
+		Angle operator+(const double& other) const
+		{
+			return Angle(_value + other);
+		}
+
+		Angle operator-(const double& other) const
+		{
+			return Angle(_value - other);
+		}
+
+		Angle operator*(const double& other) const
+		{
+			return Angle(_value * other);
+		}
+
+		Angle operator/(const double& other) const
+		{
+			if (other == 0.0)
+			{
+				throw std::invalid_argument("Division by zero");
+			}
+
+			return Angle(_value / other);
 		}
 
 	private:

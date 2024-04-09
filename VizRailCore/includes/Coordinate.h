@@ -1,7 +1,8 @@
-export module VizRailCore.Coordinate;
-import <tuple>;
+#pragma once
 
-export namespace VizRailCore
+#include <tuple>
+
+namespace VizRailCore
 {
 	class Point3D
 	{
