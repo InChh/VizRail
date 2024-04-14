@@ -25,9 +25,9 @@ TEST_CASE("TestCurveCreation", "[Curve]")
 
 	SECTION("TestCurveSteeringAngle")
 	{
-		REQUIRE(curve.SteeringAngle().Degree() == Approx(90.0));
-		REQUIRE(curve2.SteeringAngle().Degree() == Approx(0.0));
-		REQUIRE(curve3.SteeringAngle().Degree() == Approx(0.0));
-		REQUIRE(curve4.SteeringAngle().Degree() == Approx(90.0));
+		REQUIRE(curve.Alpha().Degree() == Approx(90.0));
+		REQUIRE(curve2.Alpha().Degree() == Approx(0.0));
+		REQUIRE(curve3.Alpha().Degree() == Approx(0.0));
+		REQUIRE(curve4.Alpha().Degree() == Approx(90.0));
 	}
 }
