@@ -56,7 +56,7 @@ namespace VizRailCore
 		{
 			if (value < 0.0)
 			{
-				throw std::invalid_argument("value can not be nagetive");
+				throw std::invalid_argument("rhs can not be negative");
 			}
 
 			if (_value - value < 0.0)

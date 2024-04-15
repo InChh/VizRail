@@ -1,0 +1,1 @@
+{"version":3,"file":"version.d.ts","sourceRoot":"https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/vcpkg-artifacts/","sources":["cli/switches/version.ts"],"names":[],"mappings":"AAGA,OAAO,EAAE,MAAM,EAAE,MAAM,WAAW,CAAC;AAEnC,qBAAa,OAAQ,SAAQ,MAAM;IACjC,MAAM,SAAa;CACpB"}

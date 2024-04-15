@@ -1,0 +1,1 @@
+{"version":3,"file":"list.d.ts","sourceRoot":"https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/vcpkg-artifacts/","sources":["cli/commands/list.ts"],"names":[],"mappings":"AAKA,OAAO,EAAE,OAAO,EAAE,MAAM,YAAY,CAAC;AAIrC,OAAO,EAAE,SAAS,EAAE,MAAM,uBAAuB,CAAC;AAElD,qBAAa,WAAY,SAAQ,OAAO;IACtC,QAAQ,CAAC,OAAO,UAAU;IAC1B,SAAS,YAAuB;IAEjB,GAAG;CAkBnB"}

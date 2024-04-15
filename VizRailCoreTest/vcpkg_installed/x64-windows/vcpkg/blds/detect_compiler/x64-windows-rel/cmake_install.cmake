@@ -1,4 +1,4 @@
-# Install script for directory: F:/Microsoft Visual Studio/2022/Community/VC/vcpkg/scripts/detect_compiler
+# Install script for directory: D:/Programming/C++/Projects/VizRail/vcpkg/scripts/detect_compiler
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)

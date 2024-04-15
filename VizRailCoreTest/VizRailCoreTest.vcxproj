@@ -147,6 +147,8 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\Directory.Build.props" />
+    <None Include="..\Directory.Build.targets" />
     <None Include="vcpkg.json" />
   </ItemGroup>
   <ItemGroup>

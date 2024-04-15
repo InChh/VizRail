@@ -13,11 +13,11 @@ Curve::Curve(const Point2D jd1, const Point2D jd2, const Point2D jd3,
 {
 	if (R <= 0)
 	{
-		throw std::invalid_argument("1");
+		throw std::invalid_argument("Radius cannot be negative or zero");
 	}
 	if (Ls < 0)
 	{
-		throw std::invalid_argument("c");
+		throw std::invalid_argument("Ls cannot be negative");
 	}
 	_r = R;
 	_ls = Ls;

@@ -3,5 +3,5 @@ Version: 3.4.0
 Depends: vcpkg-cmake, vcpkg-cmake-config
 Architecture: x64-windows
 Multi-Arch: same
-Abi: 8af7b6f372d50318c4b4039bb0f6ff1f69f841375795306682d74280c88b9d58
+Abi: 16694007fa382843ffe8399c8f0297e1b518c3f2442b0970484e0f192bf5c827
 Description: A modern, header-only test framework for unit testing.

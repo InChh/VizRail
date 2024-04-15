@@ -1,0 +1,1 @@
+{"version":3,"file":"delete.d.ts","sourceRoot":"https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/vcpkg-artifacts/","sources":["cli/commands/delete.ts"],"names":[],"mappings":"AAKA,OAAO,EAAE,OAAO,EAAE,MAAM,YAAY,CAAC;AACrC,OAAO,EAAE,OAAO,EAAE,MAAM,qBAAqB,CAAC;AAE9C,qBAAa,aAAc,SAAQ,OAAO;IACxC,QAAQ,CAAC,OAAO,YAAY;IAC5B,OAAO,UAAqB;IACb,GAAG;CAcnB"}

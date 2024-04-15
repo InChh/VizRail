@@ -8,7 +8,7 @@ void Mileage::SetValue(const double value, const MileageUnit unit)
 {
 	if (value < 0.0)
 	{
-		throw std::invalid_argument("2");
+		throw std::invalid_argument("Mileage value can not be negative");
 	}
 
 	switch (unit)

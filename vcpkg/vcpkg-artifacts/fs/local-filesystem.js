@@ -1,0 +1,527 @@
+"use strict";
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.LocalFileSystem = void 0;
+const assert_1 = require("assert");
+const constants_1 = require("constants");
+const fs_1 = require("fs");
+const promises_1 = require("fs/promises");
+const path_1 = require("path");
+const i18n_1 = require("../i18n");
+const exceptions_1 = require("../util/exceptions");
+const promise_1 = require("../util/promise");
+const filesystem_1 = require("./filesystem");
+function getFileType(stats) {
+    return filesystem_1.FileType.Unknown |
+        (stats.isDirectory() ? filesystem_1.FileType.Directory : 0) |
+        (stats.isFile() ? filesystem_1.FileType.File : 0) |
+        (stats.isSymbolicLink() ? filesystem_1.FileType.SymbolicLink : 0);
+}
+class LocalFileStats {
+    stats;
+    constructor(stats) {
+        this.stats = stats;
+        assert_1.strict.ok(stats, (0, i18n_1.i) `stats may not be undefined`);
+    }
+    get type() {
+        return getFileType(this.stats);
+    }
+    get ctime() {
+        return this.stats.ctimeMs;
+    }
+    get mtime() {
+        return this.stats.mtimeMs;
+    }
+    get size() {
+        return this.stats.size;
+    }
+    get mode() {
+        return this.stats.mode;
+    }
+}
+/**
+ * Implementation of the Local File System
+ *
+ * This is used to handle the access to the local disks.
+ */
+class LocalFileSystem extends filesystem_1.FileSystem {
+    async stat(uri) {
+        const path = uri.fsPath;
+        const s = await (0, promises_1.stat)(path);
+        return new LocalFileStats(s);
+    }
+    async readDirectory(uri, options) {
+        let retval;
+        try {
+            const folder = uri.fsPath;
+            const retval = new Array();
+            // use forEachAsync instead so we can throttle this appropriately.
+            await (await (0, promises_1.readdir)(folder)).forEachAsync(async (each) => {
+                const path = uri.fileSystem.file((0, path_1.join)(folder, each));
+                const type = getFileType(await (0, promises_1.stat)(uri.join(each).fsPath));
+                retval.push([path, type]);
+                if (options?.recursive && type === filesystem_1.FileType.Directory) {
+                    retval.push(...await this.readDirectory(path, options));
+                }
+            }).done;
+            return retval;
+        }
+        finally {
+            // log that.
+            this.directoryRead(uri, retval);
+        }
+    }
+    async createDirectory(uri) {
+        await (0, promises_1.mkdir)(uri.fsPath, { recursive: true });
+        this.directoryCreated(uri);
+    }
+    createSymlink(original, slink) {
+        return (0, promises_1.symlink)(original.fsPath, slink.fsPath, 'file');
+    }
+    async readFile(uri) {
+        let contents;
+        try {
+            contents = (0, promises_1.readFile)(uri.fsPath);
+            return await contents;
+        }
+        finally {
+            this.read(uri, contents);
+        }
+    }
+    async writeFile(uri, content) {
+        try {
+            await uri.parent.createDirectory();
+            return (0, promises_1.writeFile)(uri.fsPath, content);
+        }
+        finally {
+            this.write(uri, content);
+        }
+    }
+    async delete(uri, options) {
+        try {
+            options = options || { recursive: false };
+            await (0, promises_1.rm)(uri.fsPath, { recursive: options.recursive, force: true, maxRetries: 3, retryDelay: 20 });
+            // todo: Hack -- on windows, when something is used and then deleted, the delete might not actually finish
+            // before the Promise is resolved. Adding a delay fixes this (but probably is an underlying node bug)
+            await new Promise(res => setTimeout(res, 50));
+            return;
+        }
+        finally {
+            this.deleted(uri);
+        }
+    }
+    rename(source, target, options) {
+        try {
+            assert_1.strict.equal(source.fileSystem, target.fileSystem, (0, i18n_1.i) `Cannot rename files across filesystems`);
+            return (0, promises_1.rename)(source.fsPath, target.fsPath);
+        }
+        finally {
+            this.renamed(source, { target, options });
+        }
+    }
+    async copy(source, target, options) {
+        const { type } = await source.stat();
+        const opts = (options || {});
+        const overwrite = opts.overwrite ? 0 : constants_1.COPYFILE_EXCL;
+        if (type & filesystem_1.FileType.File) {
+            // make sure the target folder is there
+            await target.parent.createDirectory();
+            await (0, promises_1.copyFile)(source.fsPath, target.fsPath, overwrite);
+            return 1;
+        }
+        assert_1.strict.ok(type & filesystem_1.FileType.Directory, 'Unknown file type should never happen during copy');
+        let targetIsFile = false;
+        try {
+            targetIsFile = !!((await target.stat()).type & filesystem_1.FileType.File);
+        }
+        catch {
+            // not a file
+        }
+        // if it's a folder, then the target has to be a folder, or not exist
+        if (targetIsFile) {
+            throw new exceptions_1.TargetFileCollision(target, (0, i18n_1.i) `Copy failed: source (${source.fsPath}) is a folder, target (${target.fsPath}) is a file`);
+        }
+        // make sure the target folder exists
+        await target.createDirectory();
+        // only the initial call gets to wait for everybody to finish.
+        let queue;
+        // track the count, starting at the base folder.
+        if (opts.queue === undefined) {
+            queue = opts.queue = new promise_1.Queue();
+        }
+        // loop thru the contents of this folder
+        for (const [sourceUri, fileType] of await source.readDirectory()) {
+            const targetUri = target.join((0, path_1.basename)(sourceUri.path));
+            if (fileType & filesystem_1.FileType.Directory) {
+                await this.copy(sourceUri, targetUri, opts);
+                continue;
+            }
+            // queue up the copy file
+            void opts.queue.enqueue(() => (0, promises_1.copyFile)(sourceUri.fsPath, targetUri.fsPath, overwrite));
+        }
+        return queue ? queue.done : -1 /* innerloop */;
+    }
+    async readStream(uri, options) {
+        this.read(uri);
+        return (0, fs_1.createReadStream)(uri.fsPath, options);
+    }
+    async writeStream(uri, options) {
+        this.write(uri);
+        const flags = options?.append ? 'a' : 'w';
+        const createWriteOptions = { flags, mode: options?.mode, autoClose: true, emitClose: true };
+        if (options?.mtime) {
+            const mtime = options.mtime;
+            // inject futimes call as part of close
+            createWriteOptions.fs = {
+                open: fs_1.open,
+                write: fs_1.write,
+                writev: fs_1.writev,
+                close: (fd, callback) => {
+                    (0, fs_1.futimes)(fd, new Date(), mtime, (futimesErr) => {
+                        (0, fs_1.close)(fd, (closeErr) => {
+                            callback(futimesErr || closeErr);
+                        });
+                    });
+                }
+            };
+        }
+        return (0, fs_1.createWriteStream)(uri.fsPath, createWriteOptions);
+    }
+    async openFile(uri) {
+        return new LocalReadHandle(await (0, promises_1.open)(uri.fsPath, 'r'));
+    }
+}
+exports.LocalFileSystem = LocalFileSystem;
+class LocalReadHandle extends filesystem_1.ReadHandle {
+    handle;
+    constructor(handle) {
+        super();
+        this.handle = handle;
+    }
+    read(buffer, offset = 0, length = buffer.byteLength, position = null) {
+        return this.handle.read(buffer, offset, length, position);
+    }
+    async size() {
+        const stat = await this.handle.stat();
+        return stat.size;
+    }
+    async close() {
+        return this.handle.close();
+    }
+}
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoibG9jYWwtZmlsZXN5c3RlbS5qcyIsInNvdXJjZVJvb3QiOiJodHRwczovL3Jhdy5naXRodWJ1c2VyY29udGVudC5jb20vbWljcm9zb2Z0L3ZjcGtnLXRvb2wvbWFpbi92Y3BrZy1hcnRpZmFjdHMvIiwic291cmNlcyI6WyJmcy9sb2NhbC1maWxlc3lzdGVtLnRzIl0sIm5hbWVzIjpbXSwibWFwcGluZ3MiOiI7QUFBQSx1Q0FBdUM7QUFDdkMsa0NBQWtDOzs7QUFFbEMsbUNBQWdDO0FBQ2hDLHlDQUEwQztBQUMxQywyQkFBdUo7QUFDdkosMENBQXlIO0FBQ3pILCtCQUFzQztBQUV0QyxrQ0FBNEI7QUFDNUIsbURBQXlEO0FBQ3pELDZDQUF3QztBQUV4Qyw2Q0FBOEY7QUFFOUYsU0FBUyxXQUFXLENBQUMsS0FBWTtJQUMvQixPQUFPLHFCQUFRLENBQUMsT0FBTztRQUNyQixDQUFDLEtBQUssQ0FBQyxXQUFXLEVBQUUsQ0FBQyxDQUFDLENBQUMscUJBQVEsQ0FBQyxTQUFTLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztRQUM5QyxDQUFDLEtBQUssQ0FBQyxNQUFNLEVBQUUsQ0FBQyxDQUFDLENBQUMscUJBQVEsQ0FBQyxJQUFJLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQztRQUNwQyxDQUFDLEtBQUssQ0FBQyxjQUFjLEVBQUUsQ0FBQyxDQUFDLENBQUMscUJBQVEsQ0FBQyxZQUFZLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0FBQ3pELENBQUM7QUFFRCxNQUFNLGNBQWM7SUFDRTtJQUFwQixZQUFvQixLQUFZO1FBQVosVUFBSyxHQUFMLEtBQUssQ0FBTztRQUM5QixlQUFNLENBQUMsRUFBRSxDQUFDLEtBQUssRUFBRSxJQUFBLFFBQUMsRUFBQSw0QkFBNEIsQ0FBQyxDQUFDO0lBQ2xELENBQUM7SUFDRCxJQUFJLElBQUk7UUFDTixPQUFPLFdBQVcsQ0FBQyxJQUFJLENBQUMsS0FBSyxDQUFDLENBQUM7SUFDakMsQ0FBQztJQUNELElBQUksS0FBSztRQUNQ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
+// SIG // Begin signature block
+// SIG // MIIoKwYJKoZIhvcNAQcCoIIoHDCCKBgCAQExDzANBglg
+// SIG // hkgBZQMEAgEFADB3BgorBgEEAYI3AgEEoGkwZzAyBgor
+// SIG // BgEEAYI3AgEeMCQCAQEEEBDgyQbOONQRoqMAEEvTUJAC
+// SIG // AQACAQACAQACAQACAQAwMTANBglghkgBZQMEAgEFAAQg
+// SIG // +qKEgQEMw58kplKE5qSbWhXYSj/xUSc++bPJxE2T7Hyg
+// SIG // gg12MIIF9DCCA9ygAwIBAgITMwAAA68wQA5Mo00FQQAA
+// SIG // AAADrzANBgkqhkiG9w0BAQsFADB+MQswCQYDVQQGEwJV
+// SIG // UzETMBEGA1UECBMKV2FzaGluZ3RvbjEQMA4GA1UEBxMH
+// SIG // UmVkbW9uZDEeMBwGA1UEChMVTWljcm9zb2Z0IENvcnBv
+// SIG // cmF0aW9uMSgwJgYDVQQDEx9NaWNyb3NvZnQgQ29kZSBT
+// SIG // aWduaW5nIFBDQSAyMDExMB4XDTIzMTExNjE5MDkwMFoX
+// SIG // DTI0MTExNDE5MDkwMFowdDELMAkGA1UEBhMCVVMxEzAR
+// SIG // BgNVBAgTCldhc2hpbmd0b24xEDAOBgNVBAcTB1JlZG1v
+// SIG // bmQxHjAcBgNVBAoTFU1pY3Jvc29mdCBDb3Jwb3JhdGlv
+// SIG // bjEeMBwGA1UEAxMVTWljcm9zb2Z0IENvcnBvcmF0aW9u
+// SIG // MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA
+// SIG // zkvLNa2un9GBrYNDoRGkGv7d0PqtTBB4ViYakFbjuWpm
+// SIG // F0KcvDAzzaCWJPhVgIXjz+S8cHEoHuWnp/n+UOljT3eh
+// SIG // A8Rs6Lb1aTYub3tB/e0txewv2sQ3yscjYdtTBtFvEm9L
+// SIG // 8Yv76K3Cxzi/Yvrdg+sr7w8y5RHn1Am0Ff8xggY1xpWC
+// SIG // XFI+kQM18njQDcUqSlwBnexYfqHBhzz6YXA/S0EziYBu
+// SIG // 2O2mM7R6gSyYkEOHgIGTVOGnOvvC5xBgC4KNcnQuQSRL
+// SIG // iUI2CmzU8vefR6ykruyzt1rNMPI8OqWHQtSDKXU5JNqb
+// SIG // k4GNjwzcwbSzOHrxuxWHq91l/vLdVDGDUwIDAQABo4IB
+// SIG // czCCAW8wHwYDVR0lBBgwFgYKKwYBBAGCN0wIAQYIKwYB
+// SIG // BQUHAwMwHQYDVR0OBBYEFEcccTTyBDxkjvJKs/m4AgEF
+// SIG // hl7BMEUGA1UdEQQ+MDykOjA4MR4wHAYDVQQLExVNaWNy
+// SIG // b3NvZnQgQ29ycG9yYXRpb24xFjAUBgNVBAUTDTIzMDAx
+// SIG // Mis1MDE4MjYwHwYDVR0jBBgwFoAUSG5k5VAF04KqFzc3
+// SIG // IrVtqMp1ApUwVAYDVR0fBE0wSzBJoEegRYZDaHR0cDov
+// SIG // L3d3dy5taWNyb3NvZnQuY29tL3BraW9wcy9jcmwvTWlj
+// SIG // Q29kU2lnUENBMjAxMV8yMDExLTA3LTA4LmNybDBhBggr
+// SIG // BgEFBQcBAQRVMFMwUQYIKwYBBQUHMAKGRWh0dHA6Ly93
+// SIG // d3cubWljcm9zb2Z0LmNvbS9wa2lvcHMvY2VydHMvTWlj
+// SIG // Q29kU2lnUENBMjAxMV8yMDExLTA3LTA4LmNydDAMBgNV
+// SIG // HRMBAf8EAjAAMA0GCSqGSIb3DQEBCwUAA4ICAQCEsRbf
+// SIG // 80dn60xTweOWHZoWaQdpzSaDqIvqpYHE5ZzuEMJWDdcP
+// SIG // 72MGw8v6BSaJQ+a+hTCXdERnIBDPKvU4ENjgu4EBJocH
+// SIG // lSe8riiZUAR+z+z4OUYqoFd3EqJyfjjOJBR2z94Dy4ss
+// SIG // 7LEkHUbj2NZiFqBoPYu2OGQvEk+1oaUsnNKZ7Nl7FHtV
+// SIG // 7CI2lHBru83e4IPe3glIi0XVZJT5qV6Gx/QhAFmpEVBj
+// SIG // SAmDdgII4UUwuI9yiX6jJFNOEek6MoeP06LMJtbqA3Bq
+// SIG // +ZWmJ033F97uVpyaiS4bj3vFI/ZBgDnMqNDtZjcA2vi4
+// SIG // RRMweggd9vsHyTLpn6+nXoLy03vMeebq0C3k44pgUIEu
+// SIG // PQUlJIRTe6IrN3GcjaZ6zHGuQGWgu6SyO9r7qkrEpS2p
+// SIG // RjnGZjx2RmCamdAWnDdu+DmfNEPAddYjaJJ7PTnd+PGz
+// SIG // G+WeH4ocWgVnm5fJFhItjj70CJjgHqt57e1FiQcyWCwB
+// SIG // hKX2rGgN2UICHBF3Q/rsKOspjMw2OlGphTn2KmFl5J7c
+// SIG // Qxru54A9roClLnHGCiSUYos/iwFHI/dAVXEh0S0KKfTf
+// SIG // M6AC6/9bCbsD61QLcRzRIElvgCgaiMWFjOBL99pemoEl
+// SIG // AHsyzG6uX93fMfas09N9YzA0/rFAKAsNDOcFbQlEHKiD
+// SIG // T7mI20tVoCcmSIhJATCCB3owggVioAMCAQICCmEOkNIA
+// SIG // AAAAAAMwDQYJKoZIhvcNAQELBQAwgYgxCzAJBgNVBAYT
+// SIG // AlVTMRMwEQYDVQQIEwpXYXNoaW5ndG9uMRAwDgYDVQQH
+// SIG // EwdSZWRtb25kMR4wHAYDVQQKExVNaWNyb3NvZnQgQ29y
+// SIG // cG9yYXRpb24xMjAwBgNVBAMTKU1pY3Jvc29mdCBSb290
+// SIG // IENlcnRpZmljYXRlIEF1dGhvcml0eSAyMDExMB4XDTEx
+// SIG // MDcwODIwNTkwOVoXDTI2MDcwODIxMDkwOVowfjELMAkG
+// SIG // A1UEBhMCVVMxEzARBgNVBAgTCldhc2hpbmd0b24xEDAO
+// SIG // BgNVBAcTB1JlZG1vbmQxHjAcBgNVBAoTFU1pY3Jvc29m
+// SIG // dCBDb3Jwb3JhdGlvbjEoMCYGA1UEAxMfTWljcm9zb2Z0
+// SIG // IENvZGUgU2lnbmluZyBQQ0EgMjAxMTCCAiIwDQYJKoZI
+// SIG // hvcNAQEBBQADggIPADCCAgoCggIBAKvw+nIQHC6t2G6q
+// SIG // ghBNNLrytlghn0IbKmvpWlCquAY4GgRJun/DDB7dN2vG
+// SIG // EtgL8DjCmQawyDnVARQxQtOJDXlkh36UYCRsr55JnOlo
+// SIG // XtLfm1OyCizDr9mpK656Ca/XllnKYBoF6WZ26DJSJhIv
+// SIG // 56sIUM+zRLdd2MQuA3WraPPLbfM6XKEW9Ea64DhkrG5k
+// SIG // NXimoGMPLdNAk/jj3gcN1Vx5pUkp5w2+oBN3vpQ97/vj
+// SIG // K1oQH01WKKJ6cuASOrdJXtjt7UORg9l7snuGG9k+sYxd
+// SIG // 6IlPhBryoS9Z5JA7La4zWMW3Pv4y07MDPbGyr5I4ftKd
+// SIG // gCz1TlaRITUlwzluZH9TupwPrRkjhMv0ugOGjfdf8NBS
+// SIG // v4yUh7zAIXQlXxgotswnKDglmDlKNs98sZKuHCOnqWbs
+// SIG // YR9q4ShJnV+I4iVd0yFLPlLEtVc/JAPw0XpbL9Uj43Bd
+// SIG // D1FGd7P4AOG8rAKCX9vAFbO9G9RVS+c5oQ/pI0m8GLhE
+// SIG // fEXkwcNyeuBy5yTfv0aZxe/CHFfbg43sTUkwp6uO3+xb
+// SIG // n6/83bBm4sGXgXvt1u1L50kppxMopqd9Z4DmimJ4X7Iv
+// SIG // hNdXnFy/dygo8e1twyiPLI9AN0/B4YVEicQJTMXUpUMv
+// SIG // dJX3bvh4IFgsE11glZo+TzOE2rCIF96eTvSWsLxGoGyY
+// SIG // 0uDWiIwLAgMBAAGjggHtMIIB6TAQBgkrBgEEAYI3FQEE
+// SIG // AwIBADAdBgNVHQ4EFgQUSG5k5VAF04KqFzc3IrVtqMp1
+// SIG // ApUwGQYJKwYBBAGCNxQCBAweCgBTAHUAYgBDAEEwCwYD
+// SIG // VR0PBAQDAgGGMA8GA1UdEwEB/wQFMAMBAf8wHwYDVR0j
+// SIG // BBgwFoAUci06AjGQQ7kUBU7h6qfHMdEjiTQwWgYDVR0f
+// SIG // BFMwUTBPoE2gS4ZJaHR0cDovL2NybC5taWNyb3NvZnQu
+// SIG // Y29tL3BraS9jcmwvcHJvZHVjdHMvTWljUm9vQ2VyQXV0
+// SIG // MjAxMV8yMDExXzAzXzIyLmNybDBeBggrBgEFBQcBAQRS
+// SIG // MFAwTgYIKwYBBQUHMAKGQmh0dHA6Ly93d3cubWljcm9z
+// SIG // b2Z0LmNvbS9wa2kvY2VydHMvTWljUm9vQ2VyQXV0MjAx
+// SIG // MV8yMDExXzAzXzIyLmNydDCBnwYDVR0gBIGXMIGUMIGR
+// SIG // BgkrBgEEAYI3LgMwgYMwPwYIKwYBBQUHAgEWM2h0dHA6
+// SIG // Ly93d3cubWljcm9zb2Z0LmNvbS9wa2lvcHMvZG9jcy9w
+// SIG // cmltYXJ5Y3BzLmh0bTBABggrBgEFBQcCAjA0HjIgHQBM
+// SIG // AGUAZwBhAGwAXwBwAG8AbABpAGMAeQBfAHMAdABhAHQA
+// SIG // ZQBtAGUAbgB0AC4gHTANBgkqhkiG9w0BAQsFAAOCAgEA
+// SIG // Z/KGpZjgVHkaLtPYdGcimwuWEeFjkplCln3SeQyQwWVf
+// SIG // Liw++MNy0W2D/r4/6ArKO79HqaPzadtjvyI1pZddZYSQ
+// SIG // fYtGUFXYDJJ80hpLHPM8QotS0LD9a+M+By4pm+Y9G6XU
+// SIG // tR13lDni6WTJRD14eiPzE32mkHSDjfTLJgJGKsKKELuk
+// SIG // qQUMm+1o+mgulaAqPyprWEljHwlpblqYluSD9MCP80Yr
+// SIG // 3vw70L01724lruWvJ+3Q3fMOr5kol5hNDj0L8giJ1h/D
+// SIG // Mhji8MUtzluetEk5CsYKwsatruWy2dsViFFFWDgycSca
+// SIG // f7H0J/jeLDogaZiyWYlobm+nt3TDQAUGpgEqKD6CPxNN
+// SIG // ZgvAs0314Y9/HG8VfUWnduVAKmWjw11SYobDHWM2l4bf
+// SIG // 2vP48hahmifhzaWX0O5dY0HjWwechz4GdwbRBrF1HxS+
+// SIG // YWG18NzGGwS+30HHDiju3mUv7Jf2oVyW2ADWoUa9WfOX
+// SIG // pQlLSBCZgB/QACnFsZulP0V3HjXG0qKin3p6IvpIlR+r
+// SIG // +0cjgPWe+L9rt0uX4ut1eBrs6jeZeRhL/9azI2h15q/6
+// SIG // /IvrC4DqaTuv/DDtBEyO3991bWORPdGdVk5Pv4BXIqF4
+// SIG // ETIheu9BCrE/+6jMpF3BoYibV3FWTkhFwELJm3ZbCoBI
+// SIG // a/15n8G9bW1qyVJzEw16UM0xghoNMIIaCQIBATCBlTB+
+// SIG // MQswCQYDVQQGEwJVUzETMBEGA1UECBMKV2FzaGluZ3Rv
+// SIG // bjEQMA4GA1UEBxMHUmVkbW9uZDEeMBwGA1UEChMVTWlj
+// SIG // cm9zb2Z0IENvcnBvcmF0aW9uMSgwJgYDVQQDEx9NaWNy
+// SIG // b3NvZnQgQ29kZSBTaWduaW5nIFBDQSAyMDExAhMzAAAD
+// SIG // rzBADkyjTQVBAAAAAAOvMA0GCWCGSAFlAwQCAQUAoIGu
+// SIG // MBkGCSqGSIb3DQEJAzEMBgorBgEEAYI3AgEEMBwGCisG
+// SIG // AQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMC8GCSqGSIb3
+// SIG // DQEJBDEiBCAo2/kEUuteNeq4v9MYTTOdHpXAzIL2ilMY
+// SIG // 8Puz8PkMbTBCBgorBgEEAYI3AgEMMTQwMqAUgBIATQBp
+// SIG // AGMAcgBvAHMAbwBmAHShGoAYaHR0cDovL3d3dy5taWNy
+// SIG // b3NvZnQuY29tMA0GCSqGSIb3DQEBAQUABIIBAJbFWtWj
+// SIG // TcOIc+I6n+fkt6pciXGhD0sHE6sAB1fgLdHp6Z5j2LBB
+// SIG // G+M/MPBka9uf3thIj3Tr61Axe+HeHdbnHIYpCIazqYYi
+// SIG // QVBaWaUs/BOLU0ALkOYvqbj3oAXyVaZJylnESxil4fnc
+// SIG // lA7sEcajk/zqDPkuy3OMfwkQEpgsRVv0IGlUXfDmYIRX
+// SIG // sDoEvqGJnkEAFv56dEDA4WSWgNb0JJ8mXeiMGUw1uge5
+// SIG // 82/ML6OqAG9M/pN5KgzMKYPEA1M9DFVp3uA0DE3zZpF2
+// SIG // KLgIEOdCsVH0n4M6LFsqT6k1jU0ABUkz2ZKhLtAnwCvg
+// SIG // 60XyttIsORLt2bCEeAAgrMvBTLKhgheXMIIXkwYKKwYB
+// SIG // BAGCNwMDATGCF4Mwghd/BgkqhkiG9w0BBwKgghdwMIIX
+// SIG // bAIBAzEPMA0GCWCGSAFlAwQCAQUAMIIBUgYLKoZIhvcN
+// SIG // AQkQAQSgggFBBIIBPTCCATkCAQEGCisGAQQBhFkKAwEw
+// SIG // MTANBglghkgBZQMEAgEFAAQgutSgZ+RF+P7caApW6IZS
+// SIG // cDA8/jV1U4toSHFd6gamhHwCBmVorf0qRRgTMjAyMzEy
+// SIG // MTIxOTAzMzcuOTI3WjAEgAIB9KCB0aSBzjCByzELMAkG
+// SIG // A1UEBhMCVVMxEzARBgNVBAgTCldhc2hpbmd0b24xEDAO
+// SIG // BgNVBAcTB1JlZG1vbmQxHjAcBgNVBAoTFU1pY3Jvc29m
+// SIG // dCBDb3Jwb3JhdGlvbjElMCMGA1UECxMcTWljcm9zb2Z0
+// SIG // IEFtZXJpY2EgT3BlcmF0aW9uczEnMCUGA1UECxMeblNo
+// SIG // aWVsZCBUU1MgRVNOOjdGMDAtMDVFMC1EOTQ3MSUwIwYD
+// SIG // VQQDExxNaWNyb3NvZnQgVGltZS1TdGFtcCBTZXJ2aWNl
+// SIG // oIIR7TCCByAwggUIoAMCAQICEzMAAAHVqQLPxafJ6VoA
+// SIG // AQAAAdUwDQYJKoZIhvcNAQELBQAwfDELMAkGA1UEBhMC
+// SIG // VVMxEzARBgNVBAgTCldhc2hpbmd0b24xEDAOBgNVBAcT
+// SIG // B1JlZG1vbmQxHjAcBgNVBAoTFU1pY3Jvc29mdCBDb3Jw
+// SIG // b3JhdGlvbjEmMCQGA1UEAxMdTWljcm9zb2Z0IFRpbWUt
+// SIG // U3RhbXAgUENBIDIwMTAwHhcNMjMwNTI1MTkxMjMwWhcN
+// SIG // MjQwMjAxMTkxMjMwWjCByzELMAkGA1UEBhMCVVMxEzAR
+// SIG // BgNVBAgTCldhc2hpbmd0b24xEDAOBgNVBAcTB1JlZG1v
+// SIG // bmQxHjAcBgNVBAoTFU1pY3Jvc29mdCBDb3Jwb3JhdGlv
+// SIG // bjElMCMGA1UECxMcTWljcm9zb2Z0IEFtZXJpY2EgT3Bl
+// SIG // cmF0aW9uczEnMCUGA1UECxMeblNoaWVsZCBUU1MgRVNO
+// SIG // OjdGMDAtMDVFMC1EOTQ3MSUwIwYDVQQDExxNaWNyb3Nv
+// SIG // ZnQgVGltZS1TdGFtcCBTZXJ2aWNlMIICIjANBgkqhkiG
+// SIG // 9w0BAQEFAAOCAg8AMIICCgKCAgEAxX2pOezqYfb7sbZa
+// SIG // AAYi3Onp0/sih+tfW/joRnZMoYDc5F/NClBiP4xKjlTF
+// SIG // eEqrf1DxRYncdre79khE49rQM7lSrQ36thwabvNL2dL8
+// SIG // kA8nVbeDAy+LSUiqoGKHwsQyAa1sySY4AaJSnTicdbrd
+// SIG // k8jnPlDpu3vdrVTx6Y3YPjpn99Uy1H/6KLsgDifyJ59o
+// SIG // odwEj9EGJvgBUI4WAzQ7vLszHcBxeUHcLLHDWvT1Uhnn
+// SIG // S3Qy6PYy+g6DxeDWKNOpb7xELkifSJsGXwRi8v/IaRO0
+// SIG // Q+HsLySpjNfrenkLhLE146xjNlo5FtfEoFGfJ/laS9rp
+// SIG // OgIQ5Amt+eSOd9adCZKqaKJ+3R7i1HWUkDuNKplSEOqk
+// SIG // Amp7yJk6pjYBP6zydK4K9ITDyP7kdU/4mi9JhKuG6mpP
+// SIG // t7GvCPhQGDiPzwu1fsxHpPrHclrWl/p3Wxpb/0SW+ZkG
+// SIG // hp/Dbp25H7xw9ULeQ9K5rTDnpGDKu0I2KhNxRD/8AGOE
+// SIG // w7icbLY7Gth14tslAxIODCS+vyb7EF06DmfiMUeik+be
+// SIG // XweRaWWAaVSzJmt6Zuc+lV75F62LN9zVyalVi8IrMGuz
+// SIG // VBVfOxLNrKLvSHcN8gGZhyGFoDkPgyGNZ2N2huQzg4sD
+// SIG // daychG/pm1g2oK3VcXJ3K+lCijuPXqDU1xFvrHFH+hsF
+// SIG // xtChMpkCAwEAAaOCAUkwggFFMB0GA1UdDgQWBBSv0Fyj
+// SIG // Tt+WwTDs90eYIl+wJWtjmjAfBgNVHSMEGDAWgBSfpxVd
+// SIG // AF5iXYP05dJlpxtTNRnpcjBfBgNVHR8EWDBWMFSgUqBQ
+// SIG // hk5odHRwOi8vd3d3Lm1pY3Jvc29mdC5jb20vcGtpb3Bz
+// SIG // L2NybC9NaWNyb3NvZnQlMjBUaW1lLVN0YW1wJTIwUENB
+// SIG // JTIwMjAxMCgxKS5jcmwwbAYIKwYBBQUHAQEEYDBeMFwG
+// SIG // CCsGAQUFBzAChlBodHRwOi8vd3d3Lm1pY3Jvc29mdC5j
+// SIG // b20vcGtpb3BzL2NlcnRzL01pY3Jvc29mdCUyMFRpbWUt
+// SIG // U3RhbXAlMjBQQ0ElMjAyMDEwKDEpLmNydDAMBgNVHRMB
+// SIG // Af8EAjAAMBYGA1UdJQEB/wQMMAoGCCsGAQUFBwMIMA4G
+// SIG // A1UdDwEB/wQEAwIHgDANBgkqhkiG9w0BAQsFAAOCAgEA
+// SIG // ZkXXar0Lso0acdBxsbzqn3xa24BQINI/Nr9L+0fv/Gu9
+// SIG // EtleLe8imCkrEBiOqb7dQPCRprmco5iF5sNtwJCOW2ZM
+// SIG // b0oMLPK6wbScPb2pBHJHFhUG+yRum+tfMdLPUNwy9HUa
+// SIG // uOkGUZ5u1Ott+JXnL47LQKMN9HT9E5yGnD1iqT3N0IAf
+// SIG // lg54JTdn3U9a7kOliFQXp5qY6RvcqUQDSlMeTUXKXSQE
+// SIG // FthahB00tzbW/tLQqiJDRyeWhbBenoUaL1madDGCM/W6
+// SIG // SR4sdFa43S1TDqXu8L+trfdBN1KxNiplcKUOcLDA+mFL
+// SIG // HKArEkUGawOQG8EzgmSaXhts97w6P4brzyvE3kydi7bv
+// SIG // yLV4MSJSDkKf7WxwIjfF6bcPyZiGYPXnUPxYg2iCMBuW
+// SIG // B7H5tru08Dhcnejqi8NfGeY/yLwz85ZMFicZOkRyReXU
+// SIG // uLN358i8NwxwXuQ2r+imAeJ/Mf3BJg/0eOP/IEuT37ht
+// SIG // bK4y3cshrcodCokQ0po8Pn2u4tVT6HponQ1jWe5LDWnT
+// SIG // GneGaA74JKjleAOmvjfByHPz+oNIq63sy1lIGyl0jfIh
+// SIG // /UT/liRceXwRxOABca2wFENmZ+Yw5hwCN8GHEA55xGD+
+// SIG // dQO+VhcD7Lwa3629fumtX7kxB9QGHTjjMvH1/MSqNBNG
+// SIG // LPu28SLxT7FKUs3xYwaJZocwggdxMIIFWaADAgECAhMz
+// SIG // AAAAFcXna54Cm0mZAAAAAAAVMA0GCSqGSIb3DQEBCwUA
+// SIG // MIGIMQswCQYDVQQGEwJVUzETMBEGA1UECBMKV2FzaGlu
+// SIG // Z3RvbjEQMA4GA1UEBxMHUmVkbW9uZDEeMBwGA1UEChMV
+// SIG // TWljcm9zb2Z0IENvcnBvcmF0aW9uMTIwMAYDVQQDEylN
+// SIG // aWNyb3NvZnQgUm9vdCBDZXJ0aWZpY2F0ZSBBdXRob3Jp
+// SIG // dHkgMjAxMDAeFw0yMTA5MzAxODIyMjVaFw0zMDA5MzAx
+// SIG // ODMyMjVaMHwxCzAJBgNVBAYTAlVTMRMwEQYDVQQIEwpX
+// SIG // YXNoaW5ndG9uMRAwDgYDVQQHEwdSZWRtb25kMR4wHAYD
+// SIG // VQQKExVNaWNyb3NvZnQgQ29ycG9yYXRpb24xJjAkBgNV
+// SIG // BAMTHU1pY3Jvc29mdCBUaW1lLVN0YW1wIFBDQSAyMDEw
+// SIG // MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEA
+// SIG // 5OGmTOe0ciELeaLL1yR5vQ7VgtP97pwHB9KpbE51yMo1
+// SIG // V/YBf2xK4OK9uT4XYDP/XE/HZveVU3Fa4n5KWv64NmeF
+// SIG // RiMMtY0Tz3cywBAY6GB9alKDRLemjkZrBxTzxXb1hlDc
+// SIG // wUTIcVxRMTegCjhuje3XD9gmU3w5YQJ6xKr9cmmvHaus
+// SIG // 9ja+NSZk2pg7uhp7M62AW36MEBydUv626GIl3GoPz130
+// SIG // /o5Tz9bshVZN7928jaTjkY+yOSxRnOlwaQ3KNi1wjjHI
+// SIG // NSi947SHJMPgyY9+tVSP3PoFVZhtaDuaRr3tpK56KTes
+// SIG // y+uDRedGbsoy1cCGMFxPLOJiss254o2I5JasAUq7vnGp
+// SIG // F1tnYN74kpEeHT39IM9zfUGaRnXNxF803RKJ1v2lIH1+
+// SIG // /NmeRd+2ci/bfV+AutuqfjbsNkz2K26oElHovwUDo9Fz
+// SIG // pk03dJQcNIIP8BDyt0cY7afomXw/TNuvXsLz1dhzPUNO
+// SIG // wTM5TI4CvEJoLhDqhFFG4tG9ahhaYQFzymeiXtcodgLi
+// SIG // Mxhy16cg8ML6EgrXY28MyTZki1ugpoMhXV8wdJGUlNi5
+// SIG // UPkLiWHzNgY1GIRH29wb0f2y1BzFa/ZcUlFdEtsluq9Q
+// SIG // BXpsxREdcu+N+VLEhReTwDwV2xo3xwgVGD94q0W29R6H
+// SIG // XtqPnhZyacaue7e3PmriLq0CAwEAAaOCAd0wggHZMBIG
+// SIG // CSsGAQQBgjcVAQQFAgMBAAEwIwYJKwYBBAGCNxUCBBYE
+// SIG // FCqnUv5kxJq+gpE8RjUpzxD/LwTuMB0GA1UdDgQWBBSf
+// SIG // pxVdAF5iXYP05dJlpxtTNRnpcjBcBgNVHSAEVTBTMFEG
+// SIG // DCsGAQQBgjdMg30BATBBMD8GCCsGAQUFBwIBFjNodHRw
+// SIG // Oi8vd3d3Lm1pY3Jvc29mdC5jb20vcGtpb3BzL0RvY3Mv
+// SIG // UmVwb3NpdG9yeS5odG0wEwYDVR0lBAwwCgYIKwYBBQUH
+// SIG // AwgwGQYJKwYBBAGCNxQCBAweCgBTAHUAYgBDAEEwCwYD
+// SIG // VR0PBAQDAgGGMA8GA1UdEwEB/wQFMAMBAf8wHwYDVR0j
+// SIG // BBgwFoAU1fZWy4/oolxiaNE9lJBb186aGMQwVgYDVR0f
+// SIG // BE8wTTBLoEmgR4ZFaHR0cDovL2NybC5taWNyb3NvZnQu
+// SIG // Y29tL3BraS9jcmwvcHJvZHVjdHMvTWljUm9vQ2VyQXV0
+// SIG // XzIwMTAtMDYtMjMuY3JsMFoGCCsGAQUFBwEBBE4wTDBK
+// SIG // BggrBgEFBQcwAoY+aHR0cDovL3d3dy5taWNyb3NvZnQu
+// SIG // Y29tL3BraS9jZXJ0cy9NaWNSb29DZXJBdXRfMjAxMC0w
+// SIG // Ni0yMy5jcnQwDQYJKoZIhvcNAQELBQADggIBAJ1Vffwq
+// SIG // reEsH2cBMSRb4Z5yS/ypb+pcFLY+TkdkeLEGk5c9MTO1
+// SIG // OdfCcTY/2mRsfNB1OW27DzHkwo/7bNGhlBgi7ulmZzpT
+// SIG // Td2YurYeeNg2LpypglYAA7AFvonoaeC6Ce5732pvvinL
+// SIG // btg/SHUB2RjebYIM9W0jVOR4U3UkV7ndn/OOPcbzaN9l
+// SIG // 9qRWqveVtihVJ9AkvUCgvxm2EhIRXT0n4ECWOKz3+SmJ
+// SIG // w7wXsFSFQrP8DJ6LGYnn8AtqgcKBGUIZUnWKNsIdw2Fz
+// SIG // Lixre24/LAl4FOmRsqlb30mjdAy87JGA0j3mSj5mO0+7
+// SIG // hvoyGtmW9I/2kQH2zsZ0/fZMcm8Qq3UwxTSwethQ/gpY
+// SIG // 3UA8x1RtnWN0SCyxTkctwRQEcb9k+SS+c23Kjgm9swFX
+// SIG // SVRk2XPXfx5bRAGOWhmRaw2fpCjcZxkoJLo4S5pu+yFU
+// SIG // a2pFEUep8beuyOiJXk+d0tBMdrVXVAmxaQFEfnyhYWxz
+// SIG // /gq77EFmPWn9y8FBSX5+k77L+DvktxW/tM4+pTFRhLy/
+// SIG // AsGConsXHRWJjXD+57XQKBqJC4822rpM+Zv/Cuk0+CQ1
+// SIG // ZyvgDbjmjJnW4SLq8CdCPSWU5nR0W2rRnj7tfqAxM328
+// SIG // y+l7vzhwRNGQ8cirOoo6CGJ/2XBjU02N7oJtpQUQwXEG
+// SIG // ahC0HVUzWLOhcGbyoYIDUDCCAjgCAQEwgfmhgdGkgc4w
+// SIG // gcsxCzAJBgNVBAYTAlVTMRMwEQYDVQQIEwpXYXNoaW5n
+// SIG // dG9uMRAwDgYDVQQHEwdSZWRtb25kMR4wHAYDVQQKExVN
+// SIG // aWNyb3NvZnQgQ29ycG9yYXRpb24xJTAjBgNVBAsTHE1p
+// SIG // Y3Jvc29mdCBBbWVyaWNhIE9wZXJhdGlvbnMxJzAlBgNV
+// SIG // BAsTHm5TaGllbGQgVFNTIEVTTjo3RjAwLTA1RTAtRDk0
+// SIG // NzElMCMGA1UEAxMcTWljcm9zb2Z0IFRpbWUtU3RhbXAg
+// SIG // U2VydmljZaIjCgEBMAcGBSsOAwIaAxUAThIvkv2VRXus
+// SIG // NSHd9ZuioHtupTSggYMwgYCkfjB8MQswCQYDVQQGEwJV
+// SIG // UzETMBEGA1UECBMKV2FzaGluZ3RvbjEQMA4GA1UEBxMH
+// SIG // UmVkbW9uZDEeMBwGA1UEChMVTWljcm9zb2Z0IENvcnBv
+// SIG // cmF0aW9uMSYwJAYDVQQDEx1NaWNyb3NvZnQgVGltZS1T
+// SIG // dGFtcCBQQ0EgMjAxMDANBgkqhkiG9w0BAQsFAAIFAOki
+// SIG // /awwIhgPMjAyMzEyMTIxNTQxMzJaGA8yMDIzMTIxMzE1
+// SIG // NDEzMlowdzA9BgorBgEEAYRZCgQBMS8wLTAKAgUA6SL9
+// SIG // rAIBADAKAgEAAgIBuAIB/zAHAgEAAgIT2TAKAgUA6SRP
+// SIG // LAIBADA2BgorBgEEAYRZCgQCMSgwJjAMBgorBgEEAYRZ
+// SIG // CgMCoAowCAIBAAIDB6EgoQowCAIBAAIDAYagMA0GCSqG
+// SIG // SIb3DQEBCwUAA4IBAQBayFZD1/Ysjeb6RU/NetzOaKRx
+// SIG // 3HUAuWoeYmfFnLAa2ePlYdCCuH3918dy9Y53lGCcONvl
+// SIG // 4SI/1SW1Kcr8Ju8NXGzCeALIZJkFVRS4errzhWVdrz4v
+// SIG // mtFW9LHZhWO/jcMVnez+RwIHupd/C/1h/7dkM9NUczm4
+// SIG // NdmnKv4TqO2aoT4NXYKSyUBYW2PXGcxxkSzZWkqm2YrF
+// SIG // Zta0/HUWe8tFEZV9xAnVhVX7SWuGGCmjeTp81d0UKek5
+// SIG // ftBr1Dpbai6IH87z5yTqpOLrpMf0oeXlREKvBZI95igf
+// SIG // JYedFMkHEQfYJUUvV68XOcliaD71j0Stmcbqz/BlWYH3
+// SIG // GDdxLhR+MYIEDTCCBAkCAQEwgZMwfDELMAkGA1UEBhMC
+// SIG // VVMxEzARBgNVBAgTCldhc2hpbmd0b24xEDAOBgNVBAcT
+// SIG // B1JlZG1vbmQxHjAcBgNVBAoTFU1pY3Jvc29mdCBDb3Jw
+// SIG // b3JhdGlvbjEmMCQGA1UEAxMdTWljcm9zb2Z0IFRpbWUt
+// SIG // U3RhbXAgUENBIDIwMTACEzMAAAHVqQLPxafJ6VoAAQAA
+// SIG // AdUwDQYJYIZIAWUDBAIBBQCgggFKMBoGCSqGSIb3DQEJ
+// SIG // AzENBgsqhkiG9w0BCRABBDAvBgkqhkiG9w0BCQQxIgQg
+// SIG // 3w/IPJ05D8PYUPxBDBadKUQzSGVZw7mRTvlo91oZwxsw
+// SIG // gfoGCyqGSIb3DQEJEAIvMYHqMIHnMIHkMIG9BCDZvyOG
+// SIG // DNeuiTDOxCiHGL5XG69gh4ygtC1DpqWSGwbB/zCBmDCB
+// SIG // gKR+MHwxCzAJBgNVBAYTAlVTMRMwEQYDVQQIEwpXYXNo
+// SIG // aW5ndG9uMRAwDgYDVQQHEwdSZWRtb25kMR4wHAYDVQQK
+// SIG // ExVNaWNyb3NvZnQgQ29ycG9yYXRpb24xJjAkBgNVBAMT
+// SIG // HU1pY3Jvc29mdCBUaW1lLVN0YW1wIFBDQSAyMDEwAhMz
+// SIG // AAAB1akCz8WnyelaAAEAAAHVMCIEIFkxckJpT3b1W2L+
+// SIG // y9d8yQFART3HxtTGWnI87WYmxBucMA0GCSqGSIb3DQEB
+// SIG // CwUABIICACTI/mNN8jiOL72Q9G7YFEYB1sIVmgFay5j5
+// SIG // Wyp345+4EsHaSABqBAq18QlRZ3Mb4/qmQn3gy0OQH50n
+// SIG // SW6qStwuLDORTv3H7zbHyEPXvYEcBsWyvZVgX8L/tkor
+// SIG // DF6CDdSYhih+CdM5anlfupYPrIwWVjO2vjMHyCZvB0YT
+// SIG // uAza/Qje21D7IxV6E+/LsC4XIupNKSHziWb7xOul1EHr
+// SIG // plJTEyjqIayKz0RKI4TYo7fiqXvUn42HFYDYubfu9IIV
+// SIG // hGace9nog7yZ50eaj0+zhub6ir9PQEZsBWB5uLInOCEr
+// SIG // RGSJFqNoVoTNkHbK5DT+X/jP/OUvIr/CyqzQ6cYEEwwI
+// SIG // 3wVmuA/sNnOpuBkzRgIP7BGx7koO8q3f6bJOs76svwvQ
+// SIG // 0DnNg3dUMH0Sh17SXLZ22cW7XJYR++Cq06GtATmvs6bX
+// SIG // 9QqCp8nsfKEPmYIraoyCmdU1Jp+f3BAUNI+p5AYJ7yyV
+// SIG // 8DsehVTDY/11YupsIYJ1/a6XPpsQRj7ymvjuZz/xfDPV
+// SIG // p9WYtK1YklKA0Foc8r+KoUwG2OtOO5XOaOsuzEfruqx4
+// SIG // iNmEvlc5F3gDs/z/mgoUhQZOJB5NJo4wc7mdn7lcoOHb
+// SIG // 8oSV/gMhS1e1ckAED/pCrBlDMJumDysZH/wG9JoxVloH
+// SIG // usGWPqp7yehqDWhrc/fHFLDbG8JROyx/
+// SIG // End signature block

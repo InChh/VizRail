@@ -1,0 +1,1 @@
+{"version":3,"file":"argument.d.ts","sourceRoot":"https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/vcpkg-artifacts/","sources":["cli/argument.ts"],"names":[],"mappings":"AAGA,OAAO,EAAE,OAAO,EAAE,MAAM,WAAW,CAAC;AAEpC,8BAAsB,QAAQ;IAIhB,SAAS,CAAC,OAAO,EAAE,OAAO;IAHtC,QAAQ,CAAC,QAAQ,CAAC,QAAQ,EAAE,MAAM,CAAC;IACnC,QAAQ,CAAC,KAAK,MAAM;gBAEE,OAAO,EAAE,OAAO;CAGvC"}

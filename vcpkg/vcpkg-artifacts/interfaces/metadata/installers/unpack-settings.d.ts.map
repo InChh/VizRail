@@ -1,0 +1,1 @@
+{"version":3,"file":"unpack-settings.d.ts","sourceRoot":"https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/vcpkg-artifacts/","sources":["interfaces/metadata/installers/unpack-settings.ts"],"names":[],"mappings":"AAGA,OAAO,EAAE,OAAO,EAAE,MAAM,mBAAmB,CAAC;AAG5C,MAAM,WAAW,cAAc;IAC7B,qIAAqI;IACrI,KAAK,CAAC,EAAE,MAAM,CAAC;IAEf,4GAA4G;IAC5G,SAAS,EAAE,OAAO,CAAC;CACpB"}

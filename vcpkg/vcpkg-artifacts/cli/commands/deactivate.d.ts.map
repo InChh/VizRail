@@ -1,0 +1,1 @@
+{"version":3,"file":"deactivate.d.ts","sourceRoot":"https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/vcpkg-artifacts/","sources":["cli/commands/deactivate.ts"],"names":[],"mappings":"AAMA,OAAO,EAAE,OAAO,EAAE,MAAM,YAAY,CAAC;AAErC,qBAAa,iBAAkB,SAAQ,OAAO;IAC5C,QAAQ,CAAC,OAAO,gBAAgB;IAEvB,GAAG;CAGb"}

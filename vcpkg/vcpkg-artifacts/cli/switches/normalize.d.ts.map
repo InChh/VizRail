@@ -1,0 +1,1 @@
+{"version":3,"file":"normalize.d.ts","sourceRoot":"https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/vcpkg-artifacts/","sources":["cli/switches/normalize.ts"],"names":[],"mappings":"AAGA,OAAO,EAAE,MAAM,EAAE,MAAM,WAAW,CAAC;AAEnC,qBAAa,SAAU,SAAQ,MAAM;IACnC,MAAM,SAAe;CACtB"}

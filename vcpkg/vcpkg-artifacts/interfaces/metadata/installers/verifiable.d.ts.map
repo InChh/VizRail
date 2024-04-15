@@ -1,0 +1,1 @@
+{"version":3,"file":"verifiable.d.ts","sourceRoot":"https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/vcpkg-artifacts/","sources":["interfaces/metadata/installers/verifiable.ts"],"names":[],"mappings":"AAGA,4CAA4C;AAE5C,MAAM,WAAW,UAAU;IACzB,mBAAmB;IACnB,MAAM,CAAC,EAAE,MAAM,CAAC;IAChB,MAAM,CAAC,EAAE,MAAM,CAAC;CACjB"}

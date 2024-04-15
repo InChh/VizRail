@@ -1,0 +1,1 @@
+{"version":3,"file":"json.d.ts","sourceRoot":"https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/vcpkg-artifacts/","sources":["cli/switches/json.ts"],"names":[],"mappings":"AAKA,OAAO,EAAE,GAAG,EAAE,MAAM,gBAAgB,CAAC;AACrC,OAAO,EAAE,MAAM,EAAE,MAAM,WAAW,CAAC;AAEnC,qBAAa,IAAK,SAAQ,MAAM;IAC9B,MAAM,SAAU;IAEhB,IAAI,aAAa,IAAI,GAAG,GAAG,SAAS,CAOnC;CAEF"}

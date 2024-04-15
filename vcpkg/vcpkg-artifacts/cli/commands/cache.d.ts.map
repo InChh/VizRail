@@ -1,0 +1,1 @@
+{"version":3,"file":"cache.d.ts","sourceRoot":"https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/vcpkg-artifacts/","sources":["cli/commands/cache.ts"],"names":[],"mappings":"AAQA,OAAO,EAAE,OAAO,EAAE,MAAM,YAAY,CAAC;AAGrC,OAAO,EAAE,KAAK,EAAE,MAAM,mBAAmB,CAAC;AAE1C,qBAAa,YAAa,SAAQ,OAAO;IACvC,QAAQ,CAAC,OAAO,WAAW;IAC3B,KAAK,QAAmB;IAET,GAAG;CA6BnB"}

@@ -1,0 +1,9 @@
+export declare const undoVariableName = "Z_VCPKG_UNDO";
+export declare const postscriptVariable = "Z_VCPKG_POSTSCRIPT";
+export declare const latestVersion = "*";
+export declare const vcpkgDownloadVariable = "VCPKG_DOWNLOADS";
+export declare const manifestName = "vcpkg.json";
+export declare const configurationName = "vcpkg-configuration.json";
+export declare const registryIndexFile = "index.yaml";
+export declare const defaultConfig = "{\n  \"registries\": [\n    {\n      \"kind\": \"artifact\",\n      \"name\": \"microsoft\",\n      \"location\": \"https://github.com/microsoft/vcpkg-ce-catalog/archive/refs/heads/main.zip\"\n    },\n    {\n      \"kind\": \"artifact\",\n      \"name\": \"arm\",\n      \"location\": \"https://artifacts.keil.arm.com/vcpkg-ce-registry/registry.zip\"\n    }\n  ]\n}\n";
+//# sourceMappingURL=constants.d.ts.map
