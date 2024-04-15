@@ -13,15 +13,14 @@ Curve::Curve(const Point2D jd1, const Point2D jd2, const Point2D jd3,
 {
 	if (R <= 0)
 	{
-		throw std::invalid_argument("曲线半径不能为负或零");
+		throw std::invalid_argument("1");
 	}
 	if (Ls < 0)
 	{
-		throw std::invalid_argument("缓和曲线长不能为负");
+		throw std::invalid_argument("c");
 	}
 	_r = R;
 	_ls = Ls;
-
 }
 
 double Curve::m() const
@@ -47,6 +46,24 @@ double Curve::T_H() const
 double Curve::L_H() const
 {
 	return Alpha().Radian() * _r + _ls;
+}
+
+Mileage Curve::K(const SpecialPoint specialPoint, const Mileage& Kjd2) const
+{
+	switch (specialPoint)
+	{
+	case SpecialPoint::ZH:
+		return Mileage(Kjd2 - T_H());
+	case SpecialPoint::HY:
+		return K(SpecialPoint::ZH, Kjd2) + _ls;
+	case SpecialPoint::QZ:
+		return K(SpecialPoint::ZH, Kjd2) + L_H() / 2;
+	case SpecialPoint::YH:
+		return K(SpecialPoint::HY, Kjd2) + L_H();
+	case SpecialPoint::HZ:
+		return K(SpecialPoint::YH, Kjd2) + _ls;
+	}
+	throw std::invalid_argument("");
 }
 
 Angle Curve::Alpha() const

@@ -3,9 +3,19 @@
 
 #include "Coordinate.h"
 #include "Angle.h"
+#include "Mileage.h"
 
 namespace VizRailCore
 {
+	enum class SpecialPoint
+	{
+		ZH,
+		HY,
+		QZ,
+		YH,
+		HZ,
+	};
+
 	/// 曲线类，代表由三个交点确定的带缓和曲线的圆曲线，使用3个交点和曲线半径R、缓和曲线长Ls构造曲线对象后，可计算曲线要素和里程
 	class Curve
 	{
@@ -35,6 +45,14 @@ namespace VizRailCore
 		[[nodiscard]] double T_H() const;
 
 		[[nodiscard]] double L_H() const;
+
+		/// \brief 特殊点（直缓点，缓圆点，曲中点，圆缓点，缓直点）转里程
+		/// \param specialPoint 特殊点类型
+		/// \param Kjd2 交点2里程
+		/// \return 里程
+		[[nodiscard]] Mileage K(SpecialPoint specialPoint, const Mileage& Kjd2) const;
+
+		[[nodiscard]] Mileage K(const Point2D& point) const;
 
 	private:
 		Point2D _jd1;

@@ -31,3 +31,8 @@ TEST_CASE("TestCurveCreation", "[Curve]")
 		REQUIRE(curve4.Alpha().Degree() == Approx(90.0));
 	}
 }
+
+TEST_CASE("CurveComponentShouldComputeCorrect","[Curve]")
+{
+	
+}

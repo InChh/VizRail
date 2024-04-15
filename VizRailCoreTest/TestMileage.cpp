@@ -37,8 +37,33 @@ TEST_CASE("MileageShouldSetValue", "[Mileage]")
 TEST_CASE("MileageShouldGetCorrectString","[Mileage]")
 {
 	const Mileage mileage(100.0, MileageUnit::Meter, L"DK");
-	REQUIRE(mileage.GetString() == L"DK0.000000+100.000000");
+	REQUIRE(mileage.GetString() == L"DK0+100.000000");
 
 	const Mileage mileage2(2.0, MileageUnit::Kilometer, L"AK");
-	REQUIRE(mileage2.GetString() == L"AK2.000000+0.000000");
+	REQUIRE(mileage2.GetString() == L"AK2+0.000000");
+
+	const Mileage mileage3(41.2853, MileageUnit::Kilometer, L"AK");
+	REQUIRE(mileage3.GetString() == L"AK41+285.300000");
+}
+
+TEST_CASE("MileageShouldComputeCorrect","[Mileage]")
+{
+	const Mileage mileage(100.0, MileageUnit::Meter, L"DK");
+	const Mileage mileage2(200.0, MileageUnit::Meter, L"DK");
+	const Mileage mileage3 = mileage + mileage2;
+	REQUIRE(mileage3.Value() == Approx(300.0));
+	REQUIRE(mileage3.Prefix() == L"DK");
+
+	const Mileage mileage4 = mileage2 - mileage;
+	REQUIRE(mileage4.Value() == Approx(100.0));
+	REQUIRE(mileage4.Prefix() == L"DK");
+
+	const Mileage mileage5 = mileage2 + 123.1;
+	REQUIRE(mileage5.Value() == Approx(323.1));
+
+	const Mileage mileage6 = mileage - 12.2;
+	REQUIRE(mileage6.Value() == Approx(87.8));
+
+	const Mileage mileage7 = mileage - 300.0;
+	REQUIRE(mileage7.Value() == Approx(0.0));
 }

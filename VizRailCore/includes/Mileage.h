@@ -21,25 +21,9 @@ namespace VizRailCore
 			SetPrefix(prefix);
 		}
 
-		void SetValue(const double value, const MileageUnit unit = MileageUnit::Meter)
-		{
-			if (value < 0.0)
-			{
-				throw std::invalid_argument("里程值不能为负");
-			}
+		void SetValue(const double value, const MileageUnit unit = MileageUnit::Meter);
 
-			switch (unit)
-			{
-			case MileageUnit::Meter:
-				_value = value;
-				break;
-			case MileageUnit::Kilometer:
-				_value = value * 1000.0;
-				break;
-			}
-
-			_value = value;
-		}
+		void SetValue(const std::wstring& mileageString);
 
 		[[nodiscard]] double Value() const
 		{
@@ -55,7 +39,7 @@ namespace VizRailCore
 		{
 			if (prefix.empty())
 			{
-				throw std::invalid_argument("里程冠号不能为空");
+				throw std::invalid_argument("1");
 			}
 
 			_prefix = prefix;
@@ -72,7 +56,7 @@ namespace VizRailCore
 		{
 			if (value < 0.0)
 			{
-				throw std::invalid_argument("里程值不能为负");
+				throw std::invalid_argument("value can not be nagetive");
 			}
 
 			if (_value - value < 0.0)
