@@ -52,8 +52,6 @@ namespace VizRailCore
 		/// \return 里程
 		[[nodiscard]] Mileage K(SpecialPoint specialPoint, const Mileage& Kjd2) const;
 
-		[[nodiscard]] Mileage K(const Point2D& point) const;
-
 	private:
 		Point2D _jd1;
 		Point2D _jd2;

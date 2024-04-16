@@ -49,7 +49,6 @@ initApp()
 	acedRegCmds->addCommand(L"ASDK_VIZRAIL_COMMANDS",
 	                        L"ASDK_TESTCURVE", L"CREATE", ACRX_CMD_MODAL,
 	                        testCurve);
-	acrxBuildClassHierarchy();
 }
 
 // The cleanup function called from the acrxEntryPoint() 

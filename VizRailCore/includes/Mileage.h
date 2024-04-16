@@ -14,7 +14,7 @@ namespace VizRailCore
 	class Mileage
 	{
 	public:
-		explicit Mileage(const double value, const MileageUnit unit = MileageUnit::Meter,
+		Mileage(const double value, const MileageUnit unit = MileageUnit::Meter,
 		                 const std::wstring& prefix = L"DK")
 		{
 			SetValue(value, unit);

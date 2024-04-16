@@ -10,8 +10,6 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "解决方案项", "解决方案项", "{38D8B674-ECBD-42B5-91DB-2EF30AF6BD39}"
 	ProjectSection(SolutionItems) = preProject
 		.gitignore = .gitignore
-		Directory.Build.props = Directory.Build.props
-		Directory.Build.targets = Directory.Build.targets
 		MinimalExe.runsettings = MinimalExe.runsettings
 	EndProjectSection
 EndProject
@@ -21,6 +19,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "VizRailMain", "VizRailMain\VizRailMain.vcxproj", "{99B20388-E19A-4110-8672-C636DA693BE0}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "VizRailUi", "VizRailUi\VizRailUi.vcxproj", "{1F8862EA-4526-4F73-98C3-FB4082348FBF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -54,6 +54,14 @@ Global
 		{99B20388-E19A-4110-8672-C636DA693BE0}.Release|x64.Build.0 = Release|x64
 		{99B20388-E19A-4110-8672-C636DA693BE0}.Release|x86.ActiveCfg = Release|Win32
 		{99B20388-E19A-4110-8672-C636DA693BE0}.Release|x86.Build.0 = Release|Win32
+		{1F8862EA-4526-4F73-98C3-FB4082348FBF}.Debug|x64.ActiveCfg = Debug|x64
+		{1F8862EA-4526-4F73-98C3-FB4082348FBF}.Debug|x64.Build.0 = Debug|x64
+		{1F8862EA-4526-4F73-98C3-FB4082348FBF}.Debug|x86.ActiveCfg = Debug|Win32
+		{1F8862EA-4526-4F73-98C3-FB4082348FBF}.Debug|x86.Build.0 = Debug|Win32
+		{1F8862EA-4526-4F73-98C3-FB4082348FBF}.Release|x64.ActiveCfg = Release|x64
+		{1F8862EA-4526-4F73-98C3-FB4082348FBF}.Release|x64.Build.0 = Release|x64
+		{1F8862EA-4526-4F73-98C3-FB4082348FBF}.Release|x86.ActiveCfg = Release|Win32
+		{1F8862EA-4526-4F73-98C3-FB4082348FBF}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
