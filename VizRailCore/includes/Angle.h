@@ -52,44 +52,44 @@ namespace VizRailCore
 			return Angle(2.0 * std::numbers::pi);
 		}
 
-		double Degree() const
+		[[nodiscard]] double Degree() const
 		{
 			return _value * 180.0 / std::numbers::pi;
 		}
 
-		double Radian() const
+		[[nodiscard]] double Radian() const
 		{
 			return _value;
 		}
 
-		double Sin() const
+		static double Sin(const Angle& angle)
 		{
-			return std::sin(_value);
+			return std::sin(angle.Radian());
 		}
 
-		double Cos() const
+		static double Cos(const Angle& angle)
 		{
-			return std::cos(_value);
+			return std::cos(angle.Radian());
 		}
 
-		double Tan() const
+		static double Tan(const Angle& angle)
 		{
-			return std::tan(_value);
+			return std::tan(angle.Radian());
 		}
 
-		double Asin() const
+		static double Asin(const Angle& angle)
 		{
-			return std::asin(_value);
+			return std::asin(angle.Radian());
 		}
 
-		double Acos() const
+		static double Acos(const Angle& angle)
 		{
-			return std::acos(_value);
+			return std::acos(angle.Radian());
 		}
 
-		double Atan() const
+		static double Atan(const Angle& angle)
 		{
-			return std::atan(_value);
+			return std::atan(angle.Radian());
 		}
 
 		Angle operator+(const Angle& other) const
@@ -125,6 +125,16 @@ namespace VizRailCore
 			}
 
 			return Angle(_value / other);
+		}
+
+		bool operator>(const Angle& other) const
+		{
+			return _value > other._value;
+		}
+
+		bool operator<(const Angle& other) const
+		{
+			return _value < other._value;
 		}
 
 	private:

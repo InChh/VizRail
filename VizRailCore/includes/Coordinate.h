@@ -49,6 +49,16 @@ namespace VizRailCore
 			return _y;
 		}
 
+		void SetX(const double x)
+		{
+			_x = x;
+		}
+
+		void SetY(const double y)
+		{
+			_y = y;
+		}
+
 		std::tuple<double, double> operator-(const Point2D& other) const
 		{
 			return {_x - other._x, _y - other._y};

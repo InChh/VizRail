@@ -1,12 +1,12 @@
 #pragma once
 
 
-struct CurveTable
+struct Jd
 {
 	unsigned JdH;
 	double N;
 	double E;
-	double SteeringAngle;
+	double Angle;
 	double R;
 	double Ls;
 };
