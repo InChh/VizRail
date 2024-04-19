@@ -8,8 +8,8 @@ using namespace VizRailCore;
 
 Curve::Curve(const Point2D jd1, const Point2D jd2, const Point2D jd3,
              const double R,
-             const double Ls) :
-	_jd1(jd1), _jd2(jd2), _jd3(jd3)
+             const double Ls, const Mileage& jdMileage) :
+	_jd1(jd1), _jd2(jd2), _jd3(jd3), _jdMileage(jdMileage)
 {
 	if (R <= 0)
 	{
@@ -48,22 +48,135 @@ double Curve::L_H() const
 	return Alpha().Radian() * _r + _ls;
 }
 
-Mileage Curve::K(const SpecialPoint specialPoint, const Mileage& Kjd2) const
+Mileage Curve::K(const SpecialPoint specialPoint) const
 {
 	switch (specialPoint)
 	{
 	case SpecialPoint::ZH:
-		return Mileage(Kjd2 - T_H());
+		return Mileage(_jdMileage - T_H());
 	case SpecialPoint::HY:
-		return K(SpecialPoint::ZH, Kjd2) + _ls;
+		return K(SpecialPoint::ZH) + _ls;
 	case SpecialPoint::QZ:
-		return K(SpecialPoint::ZH, Kjd2) + L_H() / 2;
+		return K(SpecialPoint::ZH) + L_H() / 2;
 	case SpecialPoint::YH:
-		return K(SpecialPoint::HY, Kjd2) + L_H();
+		return K(SpecialPoint::HY) + L_H();
 	case SpecialPoint::HZ:
-		return K(SpecialPoint::YH, Kjd2) + _ls;
+		return K(SpecialPoint::YH) + _ls;
 	}
 	throw std::invalid_argument("");
+}
+
+bool Curve::IsInCurve(const Mileage& mileage) const
+{
+	return mileage >= K(SpecialPoint::ZH) && mileage <= K(SpecialPoint::HZ);
+}
+
+bool Curve::IsRightTurn() const
+{
+	return Alpha() > Angle::Zero();
+}
+
+Mileage Curve::CalculateDistance(const Mileage& mileage, const PointLocation pointLocation) const
+{
+	Mileage li = 0.0;
+	if (pointLocation == PointLocation::ZH2HY || pointLocation == PointLocation::HY2QZ)
+	{
+		// 在曲线前半段，计算点到ZH点的距离
+		li = mileage - K(SpecialPoint::ZH);
+	}
+	else if (pointLocation == PointLocation::QZ2YH || pointLocation == PointLocation::YH2HZ)
+	{
+		// 在曲线后半段，计算点到HZ点的距离
+		li = K(SpecialPoint::HZ) - mileage;
+	}
+	return li;
+}
+
+Point2D Curve::CalculateLocalCoordinate(const Mileage& li, const Curve::PointLocation pointLocation) const
+{
+	double xi = 0.0;
+	double yi = 0.0;
+	switch (pointLocation)
+	{
+	// 在缓和曲线上，利用缓和曲线公式计算局部坐标
+	case PointLocation::ZH:
+	case PointLocation::ZH2HY:
+	case PointLocation::HY:
+	case PointLocation::YH:
+	case PointLocation::YH2HZ:
+	case PointLocation::HZ:
+		{
+			xi = li.Value() - std::pow(li.Value(), 5) / (40 * _r * _r * _ls * _ls);
+			yi = std::pow(li.Value(), 3) / (6 * _r * _ls);
+			break;
+		}
+	// 在圆曲线上，利用圆曲线公式计算局部坐标
+	case PointLocation::HY2QZ:
+	case PointLocation::QZ:
+	case PointLocation::QZ2YH:
+		{
+			const double phi = (li.Value() - 0.5 * _ls) / _r;
+			xi = m() + _r * std::sin(phi);
+			yi = P() + _r * (1 - std::cos(phi));
+			break;
+		}
+	default:
+		break;
+	}
+	return {xi, yi};
+}
+
+Point2D Curve::MileageToCoordinate(const Mileage& mileage) const
+{
+	const PointLocation pointLocation = GetPointLocation(mileage);
+	if (pointLocation == PointLocation::NotInCurve)
+	{
+		throw std::invalid_argument("mileage is not in this curve");
+	}
+
+	// 计算局部坐标
+
+	const Mileage li = CalculateDistance(mileage, pointLocation);
+	Point2D local = CalculateLocalCoordinate(li, pointLocation);
+
+	// 计算ZH、HZ点坐标
+	const Angle aHZ = GetAzimuthAngle(_jd1, _jd2);
+	const Angle aZH = GetAzimuthAngle(_jd3, _jd2);
+	const Point2D HZ = {_jd2.X() - T_H() * Angle::Cos(aHZ), _jd2.Y() - T_H() * Angle::Sin(aHZ)};
+	const Point2D ZH = {_jd2.X() - T_H() * Angle::Cos(aZH), _jd2.Y() - T_H() * Angle::Sin(aZH)};
+
+	if (!IsRightTurn())
+	{
+		local.SetY(-local.Y());
+	}
+
+	// 计算全局坐标
+	double x = 0.0;
+	double y = 0.0;
+	switch (pointLocation)
+	{
+	case PointLocation::ZH:
+		return ZH;
+	case PointLocation::ZH2HY:
+	case PointLocation::HY:
+	case PointLocation::HY2QZ:
+	case PointLocation::QZ:
+		x = ZH.X() + local.X() * Angle::Cos(aZH) - local.Y() * Angle::Sin(aZH);
+		y = ZH.Y() + local.X() * Angle::Sin(aZH) + local.Y() * Angle::Cos(aZH);
+		break;
+	case PointLocation::QZ2YH:
+	case PointLocation::YH:
+	case PointLocation::YH2HZ:
+		x = HZ.X() + local.X() * Angle::Cos(aHZ) + local.Y() * Angle::Sin(aHZ);
+		y = HZ.Y() + local.X() * Angle::Sin(aHZ) - local.Y() * Angle::Cos(aHZ);
+		break;
+	case PointLocation::HZ:
+		return HZ;
+	default:
+		break;
+	}
+
+	return {x, y};
 }
 
 Angle Curve::Alpha() const
@@ -74,6 +187,47 @@ Angle Curve::Alpha() const
 	const Angle azimuthAngle1 = GetAzimuthAngle(dx1, dy1);
 	const Angle azimuthAngle2 = GetAzimuthAngle(dx2, dy2);
 	return Angle::FromDegree(std::fmod((azimuthAngle2 - azimuthAngle1).Degree(), 360.0));
+}
+
+Curve::PointLocation Curve::GetPointLocation(const Mileage& mileage) const
+{
+	switch (mileage)
+	{
+	case K(SpecialPoint::ZH):
+		return PointLocation::ZH;
+	case K(SpecialPoint::HY):
+		return PointLocation::HY;
+	case K(SpecialPoint::QZ):
+		return PointLocation::QZ;
+	case K(SpecialPoint::YH):
+		return PointLocation::YH;
+	case K(SpecialPoint::HZ):
+		return PointLocation::HZ;
+	default:
+		break;
+	}
+
+	if (mileage > K(SpecialPoint::ZH) && mileage < K(SpecialPoint::HY))
+	{
+		return PointLocation::ZH2HY;
+	}
+
+	if (mileage > K(SpecialPoint::HY) && mileage < K(SpecialPoint::QZ))
+	{
+		return PointLocation::HY2QZ;
+	}
+
+	if (mileage > K(SpecialPoint::QZ) && mileage < K(SpecialPoint::YH))
+	{
+		return PointLocation::QZ2YH;
+	}
+
+	if (mileage > K(SpecialPoint::YH) && mileage < K(SpecialPoint::HZ))
+	{
+		return PointLocation::YH2HZ;
+	}
+
+	return PointLocation::NotInCurve;
 }
 
 Angle VizRailCore::GetAzimuthAngle(const double dx, const double dy)
@@ -94,22 +248,28 @@ Angle VizRailCore::GetAzimuthAngle(const double dx, const double dy)
 	}
 
 	const Angle theta = Angle::FromRadian(std::atan2(std::abs(dy), std::abs(dx)));
-	Angle quadrantAngle;
+	Angle azimuthAngle;
 	if (dx > 0 && dy > 0)
 	{
-		quadrantAngle = theta;
+		azimuthAngle = theta;
 	}
 	else if (dx < 0 && dy > 0)
 	{
-		quadrantAngle = Angle::Pi() - theta;
+		azimuthAngle = Angle::Pi() - theta;
 	}
 	else if (dx > 0 && dy < 0)
 	{
-		quadrantAngle = Angle::TwoPi() - theta;
+		azimuthAngle = Angle::TwoPi() - theta;
 	}
 	else if (dx < 0 && dy < 0)
 	{
-		quadrantAngle = Angle::Pi() + theta;
+		azimuthAngle = Angle::Pi() + theta;
 	}
-	return quadrantAngle;
+	return azimuthAngle;
+}
+
+Angle VizRailCore::GetAzimuthAngle(const Point2D point1, const Point2D point2)
+{
+	auto [dx, dy] = point2 - point1;
+	return GetAzimuthAngle(dx, dy);
 }

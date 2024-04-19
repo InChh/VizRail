@@ -14,7 +14,7 @@
 #endif
 #include <vector>
 
-#include "CurveTable.h"
+#include "Jd.h"
 #include "../VizRailCore/includes/Curve.h"
 #include "../VizRailCore/includes/DatabaseUtils.h"
 #include "../VizRailCore/includes/Exceptions.h"
@@ -191,7 +191,7 @@ void CVizRailUiDlg::OnBnClickedButton2()
 	{
 		AccessConnection conn(path.GetString());
 		auto pRecordSet = conn.Execute(L"SELECT * FROM 曲线表");
-		std::vector<CurveTable> curveTableData;
+		std::vector<Jd> jds;
 		while (!pRecordSet.IsEof())
 		{
 			auto vJdH = pRecordSet->GetCollect(L"交点号");
@@ -200,44 +200,56 @@ void CVizRailUiDlg::OnBnClickedButton2()
 			auto va = pRecordSet->GetCollect(L"偏角");
 			auto vR = pRecordSet->GetCollect(L"曲线半径");
 			auto vLs = pRecordSet->GetCollect(L"前缓和曲线");
+			auto vTH = pRecordSet->GetCollect(L"前切线长");
+			auto vLH = pRecordSet->GetCollect(L"曲线长");
+			auto vLJzx = pRecordSet->GetCollect(L"夹直线长");
+			auto vStartMileage = pRecordSet->GetCollect(L"起点里程");
+			auto vEndMileage = pRecordSet->GetCollect(L"终点里程");
 
-			CurveTable c;
+			Jd c;
 			c.N = vN;
 			c.E = vE;
-			c.SteeringAngle = va;
+			c.Angle = va;
 			c.R = vR;
 			c.Ls = vLs;
 			c.JdH = vJdH;
-			curveTableData.push_back(c);
+			c.TH = vTH;
+			c.LH = vLH;
+			c.LJzx = vLJzx;
+			c.StartMileage = vStartMileage;
+			c.EndMileage = vEndMileage;
+			jds.push_back(c);
 
 			pRecordSet.MoveNext();
 		}
 
-		for (const auto& c : curveTableData)
+		for (const auto& c : jds)
 		{
 			ss << L"坐标N: " << c.N << "\t"
 				<< L"坐标E: " << c.E << "\t"
 				<< L"曲线半径: " << c.R << "\t"
 				<< L"缓长: " << c.Ls << "\n";
 		}
-		if (curveTableData.size() > 2)
+		if (jds.size() > 2)
 		{
-			for (size_t i = 1; i < curveTableData.size() - 1; ++i)
+			for (size_t i = 1; i < jds.size() - 1; ++i)
 			{
-				VizRailCore::Point2D jd1 = {curveTableData[i - 1].N, curveTableData[i - 1].E};
-				VizRailCore::Point2D jd2 = {curveTableData[i].N, curveTableData[i].E};
-				VizRailCore::Point2D jd3 = {curveTableData[i + 1].N, curveTableData[i + 1].E};
-				const double r = curveTableData[i].R;
-				const double ls = curveTableData[i].Ls;
-				VizRailCore::Curve curve(jd1, jd2, jd3, r, ls);
+				VizRailCore::Point2D jd1 = {jds[i - 1].N, jds[i - 1].E};
+				VizRailCore::Point2D jd2 = {jds[i].N, jds[i].E};
+				VizRailCore::Point2D jd3 = {jds[i + 1].N, jds[i + 1].E};
+				const double r = jds[i].R;
+				const double ls = jds[i].Ls;
+				const double startMileage = jds[i].StartMileage;
+				const double th = jds[i].TH;
+				VizRailCore::Curve curve(jd1, jd2, jd3, r, ls, startMileage + th);
 				ss << L"切线长：" << curve.T_H() << "\t"
 					<< L"曲线长：" << curve.L_H() << "\t"
 					<< L"转角：" << curve.Alpha().Degree() << "\t"
-					<< L"ZH点：" << curve.K(VizRailCore::SpecialPoint::ZH, 4567.1 + 3000 * i).Value() << "\t"
-					<< L"HY点：" << curve.K(VizRailCore::SpecialPoint::HY, 4567.1 + 3000 * i).Value() << "\t"
-					<< L"QZ点：" << curve.K(VizRailCore::SpecialPoint::QZ, 4567.1 + 3000 * i).Value() << "\t"
-					<< L"YH点：" << curve.K(VizRailCore::SpecialPoint::YH, 4567.1 + 3000 * i).Value() << "\t"
-					<< L"HZ点：" << curve.K(VizRailCore::SpecialPoint::HZ, 4567.1 + 3000 * i).Value() << "\n";
+					<< L"ZH点：" << curve.K(VizRailCore::SpecialPoint::ZH).Value() << "\t"
+					<< L"HY点：" << curve.K(VizRailCore::SpecialPoint::HY).Value() << "\t"
+					<< L"QZ点：" << curve.K(VizRailCore::SpecialPoint::QZ).Value() << "\t"
+					<< L"YH点：" << curve.K(VizRailCore::SpecialPoint::YH).Value() << "\t"
+					<< L"HZ点：" << curve.K(VizRailCore::SpecialPoint::HZ).Value() << "\n";
 			}
 		}
 		auto text = ss.str();

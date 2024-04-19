@@ -15,7 +15,7 @@ namespace VizRailCore
 	{
 	public:
 		Mileage(const double value, const MileageUnit unit = MileageUnit::Meter,
-		                 const std::wstring& prefix = L"DK")
+		        const std::wstring& prefix = L"DK")
 		{
 			SetValue(value, unit);
 			SetPrefix(prefix);
@@ -75,6 +75,31 @@ namespace VizRailCore
 		Mileage operator-(const Mileage& other) const
 		{
 			return *this - other.Value();
+		}
+
+		bool operator==(const Mileage& other) const
+		{
+			return std::abs(_value - other.Value()) < std::numeric_limits<double>::epsilon();
+		}
+
+		bool operator>(const Mileage& other) const
+		{
+			return _value > other.Value();
+		}
+
+		bool operator>=(const Mileage& other) const
+		{
+			return _value > other.Value() && *this == other;
+		}
+
+		bool operator<(const Mileage& other) const
+		{
+			return _value < other.Value();
+		}
+
+		bool operator<=(const Mileage& other) const
+		{
+			return _value < other.Value() && *this == other;
 		}
 
 	private:
