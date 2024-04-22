@@ -4,6 +4,8 @@
 #include <cmath>
 #include <stdexcept>
 
+#include "Utils.h"
+
 using namespace VizRailCore;
 
 Curve::Curve(const Point2D jd1, const Point2D jd2, const Point2D jd3,
@@ -66,7 +68,7 @@ Mileage Curve::K(const SpecialPoint specialPoint) const
 	throw std::invalid_argument("");
 }
 
-bool Curve::IsInCurve(const Mileage& mileage) const
+bool Curve::IsOnIt(const Mileage& mileage) const
 {
 	return mileage >= K(SpecialPoint::ZH) && mileage <= K(SpecialPoint::HZ);
 }
@@ -191,20 +193,29 @@ Angle Curve::Alpha() const
 
 Curve::PointLocation Curve::GetPointLocation(const Mileage& mileage) const
 {
-	switch (mileage)
+	if (mileage == K(SpecialPoint::ZH))
 	{
-	case K(SpecialPoint::ZH):
 		return PointLocation::ZH;
-	case K(SpecialPoint::HY):
+	}
+
+	if (mileage == K(SpecialPoint::HY))
+	{
 		return PointLocation::HY;
-	case K(SpecialPoint::QZ):
+	}
+
+	if (mileage == K(SpecialPoint::QZ))
+	{
 		return PointLocation::QZ;
-	case K(SpecialPoint::YH):
+	}
+
+	if (mileage == K(SpecialPoint::YH))
+	{
 		return PointLocation::YH;
-	case K(SpecialPoint::HZ):
+	}
+
+	if (mileage == K(SpecialPoint::HZ))
+	{
 		return PointLocation::HZ;
-	default:
-		break;
 	}
 
 	if (mileage > K(SpecialPoint::ZH) && mileage < K(SpecialPoint::HY))
@@ -228,48 +239,4 @@ Curve::PointLocation Curve::GetPointLocation(const Mileage& mileage) const
 	}
 
 	return PointLocation::NotInCurve;
-}
-
-Angle VizRailCore::GetAzimuthAngle(const double dx, const double dy)
-{
-	if (std::abs(dx - 0.0) < std::numeric_limits<double>::epsilon())
-	{
-		if (dy > 0)
-		{
-			return Angle::Pi() / 2;
-		}
-
-		if (dy < 0)
-		{
-			return Angle::Pi() * 3 / 2;
-		}
-
-		throw std::invalid_argument("dx and dy cannot be both zero");
-	}
-
-	const Angle theta = Angle::FromRadian(std::atan2(std::abs(dy), std::abs(dx)));
-	Angle azimuthAngle;
-	if (dx > 0 && dy > 0)
-	{
-		azimuthAngle = theta;
-	}
-	else if (dx < 0 && dy > 0)
-	{
-		azimuthAngle = Angle::Pi() - theta;
-	}
-	else if (dx > 0 && dy < 0)
-	{
-		azimuthAngle = Angle::TwoPi() - theta;
-	}
-	else if (dx < 0 && dy < 0)
-	{
-		azimuthAngle = Angle::Pi() + theta;
-	}
-	return azimuthAngle;
-}
-
-Angle VizRailCore::GetAzimuthAngle(const Point2D point1, const Point2D point2)
-{
-	auto [dx, dy] = point2 - point1;
-	return GetAzimuthAngle(dx, dy);
 }

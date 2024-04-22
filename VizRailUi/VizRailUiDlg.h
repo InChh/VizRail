@@ -1,27 +1,32 @@
-﻿
 // VizRailUiDlg.h: 头文件
 //
 
 #pragma once
+#include <map>
+#include <memory>
+#include <vector>
+
+#include "Jd.h"
+#include "../VizRailCore/includes/IMileageToCoordinate.h"
 
 
 // CVizRailUiDlg 对话框
 class CVizRailUiDlg : public CDialogEx
 {
-// 构造
+	// 构造
 public:
-	CVizRailUiDlg(CWnd* pParent = nullptr);	// 标准构造函数
+	CVizRailUiDlg(CWnd* pParent = nullptr); // 标准构造函数
 
-// 对话框数据
+	// 对话框数据
 #ifdef AFX_DESIGN_TIME
 	enum { IDD = IDD_VIZRAILUI_DIALOG };
 #endif
 
-	protected:
-	virtual void DoDataExchange(CDataExchange* pDX);	// DDX/DDV 支持
+protected:
+	virtual void DoDataExchange(CDataExchange* pDX); // DDX/DDV 支持
 
 
-// 实现
+	// 实现
 protected:
 	HICON m_hIcon;
 
@@ -31,11 +36,22 @@ protected:
 	afx_msg void OnPaint();
 	afx_msg HCURSOR OnQueryDragIcon();
 	DECLARE_MESSAGE_MAP()
+
 public:
 	afx_msg void OnBnClickedButton1();
+	void JdsToXys();
+	void GetJds(CString path);
+
 private:
-//	CString _dbFilePath;
 	CEdit _dbPathEdit;
+	std::vector<Jd> _jds;
+	std::map<std::wstring, std::shared_ptr<VizRailCore::IMileageToCoordinate>> _xys;
+
 public:
-	afx_msg void OnBnClickedButton2();
+	void SetJdListCtrlContent();
+	void OnBnClickedButton2();
+//	CListBox _jdListBox;
+	CListCtrl _jdListCtrl;
+	CEdit _mileageInput;
+	CEdit _coordinateOutput;
 };

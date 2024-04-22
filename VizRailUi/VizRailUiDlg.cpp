@@ -12,12 +12,14 @@
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
+#include <format>
 #include <vector>
 
 #include "Jd.h"
 #include "../VizRailCore/includes/Curve.h"
 #include "../VizRailCore/includes/DatabaseUtils.h"
 #include "../VizRailCore/includes/Exceptions.h"
+#include "../VizRailCore/includes/IntermediateLine.h"
 
 
 // 用于应用程序“关于”菜单项的 CAboutDlg 对话框
@@ -67,6 +69,10 @@ void CVizRailUiDlg::DoDataExchange(CDataExchange* pDX)
 	CDialogEx::DoDataExchange(pDX);
 	//  DDX_Text(pDX, IDC_EDIT1, _dbFilePath);
 	DDX_Control(pDX, IDC_EDIT1, _dbPathEdit);
+	//  DDX_Control(pDX, IDC_LIST1, _jdListBox);
+	DDX_Control(pDX, IDC_LIST2, _jdListCtrl);
+	DDX_Control(pDX, IDC_EDIT2, _mileageInput);
+	DDX_Control(pDX, IDC_EDIT3, _coordinateOutput);
 }
 
 BEGIN_MESSAGE_MAP(CVizRailUiDlg, CDialogEx)
@@ -109,11 +115,23 @@ BOOL CVizRailUiDlg::OnInitDialog()
 	SetIcon(m_hIcon, TRUE); // 设置大图标
 	SetIcon(m_hIcon, FALSE); // 设置小图标
 
-	ShowWindow(SW_MAXIMIZE);
 
-	ShowWindow(SW_MINIMIZE);
+	ShowWindow(SW_NORMAL);
 
-	// TODO: 在此添加额外的初始化代码
+	_jdListCtrl.SetExtendedStyle(LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES);
+	_jdListCtrl.InsertColumn(0, L"交点号", LVCFMT_CENTER, 100);
+	_jdListCtrl.InsertColumn(1, L"坐标N",LVCFMT_CENTER);
+	_jdListCtrl.InsertColumn(2, L"坐标E",LVCFMT_CENTER);
+	_jdListCtrl.InsertColumn(3, L"偏角",LVCFMT_CENTER);
+	_jdListCtrl.InsertColumn(4, L"曲线半径",LVCFMT_CENTER);
+	_jdListCtrl.InsertColumn(5, L"缓和曲线",LVCFMT_CENTER);
+	_jdListCtrl.InsertColumn(6, L"切线长",LVCFMT_CENTER);
+	_jdListCtrl.InsertColumn(7, L"曲线长",LVCFMT_CENTER);
+	_jdListCtrl.InsertColumn(8, L"夹直线长",LVCFMT_CENTER);
+	_jdListCtrl.InsertColumn(9, L"起点里程",LVCFMT_CENTER);
+	_jdListCtrl.InsertColumn(10, L"终点里程",LVCFMT_CENTER);
+
+	_mileageInput.SetWindowTextW(L"请输入里程");
 
 	return TRUE; // 除非将焦点设置到控件，否则返回 TRUE
 }
@@ -180,6 +198,98 @@ void CVizRailUiDlg::OnBnClickedButton1()
 }
 
 
+void CVizRailUiDlg::JdsToXys()
+{
+	if (_jds.size() > 2)
+	{
+		unsigned int jzxCount = 0;
+		unsigned int curveCount = 0;
+		for (size_t i = 1; i < _jds.size() - 1; ++i)
+		{
+			VizRailCore::Point2D jd1 = {_jds[i - 1].N, _jds[i - 1].E};
+			VizRailCore::Point2D jd2 = {_jds[i].N, _jds[i].E};
+			VizRailCore::Point2D jd3 = {_jds[i + 1].N, _jds[i + 1].E};
+			// 构造夹直线对象
+			++jzxCount;
+			const double jzxStartMileage = _jds[i - 1].EndMileage;
+			const double jzxEndMileage = _jds[i].StartMileage;
+			auto jzx = std::make_shared<VizRailCore::IntermediateLine>(
+				jd1, jzxStartMileage, jd2, jzxEndMileage);
+			_xys.insert_or_assign(std::format(L"夹直线{}", jzxCount), jzx);
+			// 构造曲线对象
+			++curveCount;
+			const double r = _jds[i].R;
+			const double ls = _jds[i].Ls;
+			const double startMileage = _jds[i].StartMileage;
+			const double th = _jds[i].TH;
+			auto curve = std::make_shared<VizRailCore::Curve>(jd1, jd2, jd3, r, ls, startMileage + th);
+			_xys.insert_or_assign(std::format(L"曲线{}", curveCount), curve);
+		}
+	}
+	if (_jds.size() == 2)
+	{
+		VizRailCore::Point2D jd1 = {_jds[0].N, _jds[0].E};
+		const double startMileage = _jds[0].StartMileage;
+		VizRailCore::Point2D jd2 = {_jds[1].N, _jds[1].E};
+		const double endMileage = _jds[1].EndMileage;
+		auto jzx = std::make_shared<VizRailCore::IntermediateLine>(jd1, startMileage, jd2, endMileage);
+		_xys.insert_or_assign(L"夹直线1", jzx);
+	}
+}
+
+void CVizRailUiDlg::GetJds(CString path)
+{
+	AccessConnection conn(path.GetString());
+	auto pRecordSet = conn.Execute(L"SELECT * FROM 曲线表");
+	while (!pRecordSet.IsEof())
+	{
+		auto vJdH = pRecordSet->GetCollect(L"交点号");
+		auto vN = pRecordSet->GetCollect(L"坐标N");
+		auto vE = pRecordSet->GetCollect(L"坐标E");
+		auto va = pRecordSet->GetCollect(L"偏角");
+		auto vR = pRecordSet->GetCollect(L"曲线半径");
+		auto vLs = pRecordSet->GetCollect(L"前缓和曲线");
+		auto vTH = pRecordSet->GetCollect(L"前切线长");
+		auto vLH = pRecordSet->GetCollect(L"曲线长");
+		auto vLJzx = pRecordSet->GetCollect(L"夹直线长");
+		auto vStartMileage = pRecordSet->GetCollect(L"起点里程");
+		auto vEndMileage = pRecordSet->GetCollect(L"终点里程");
+
+		_jds.emplace_back(vJdH,
+		                  vN,
+		                  vE,
+		                  va,
+		                  vR,
+		                  vLs,
+		                  vTH,
+		                  vLH,
+		                  vLJzx,
+		                  vStartMileage,
+		                  vEndMileage
+		);
+		pRecordSet.MoveNext();
+	}
+}
+
+void CVizRailUiDlg::SetJdListCtrlContent()
+{
+	_jdListCtrl.DeleteAllItems();
+	for (size_t i = 0; i < _jds.size(); ++i)
+	{
+		_jdListCtrl.InsertItem(i, std::format(L"{}", _jds[i].JdH).c_str());
+		_jdListCtrl.SetItemText(i, 1, std::format(L"{}", _jds[i].N).c_str());
+		_jdListCtrl.SetItemText(i, 2, std::format(L"{}", _jds[i].E).c_str());
+		_jdListCtrl.SetItemText(i, 3, std::format(L"{}", _jds[i].Angle).c_str());
+		_jdListCtrl.SetItemText(i, 4, std::format(L"{}", _jds[i].R).c_str());
+		_jdListCtrl.SetItemText(i, 5, std::format(L"{}", _jds[i].Ls).c_str());
+		_jdListCtrl.SetItemText(i, 6, std::format(L"{}", _jds[i].TH).c_str());
+		_jdListCtrl.SetItemText(i, 7, std::format(L"{}", _jds[i].LH).c_str());
+		_jdListCtrl.SetItemText(i, 8, std::format(L"{}", _jds[i].LJzx).c_str());
+		_jdListCtrl.SetItemText(i, 9, std::format(L"{}", _jds[i].StartMileage).c_str());
+		_jdListCtrl.SetItemText(i, 10, std::format(L"{}", _jds[i].EndMileage).c_str());
+	}
+}
+
 void CVizRailUiDlg::OnBnClickedButton2()
 {
 	std::wstringstream ss;
@@ -189,71 +299,9 @@ void CVizRailUiDlg::OnBnClickedButton2()
 	_dbPathEdit.GetWindowTextW(path);
 	try
 	{
-		AccessConnection conn(path.GetString());
-		auto pRecordSet = conn.Execute(L"SELECT * FROM 曲线表");
-		std::vector<Jd> jds;
-		while (!pRecordSet.IsEof())
-		{
-			auto vJdH = pRecordSet->GetCollect(L"交点号");
-			auto vN = pRecordSet->GetCollect(L"坐标N");
-			auto vE = pRecordSet->GetCollect(L"坐标E");
-			auto va = pRecordSet->GetCollect(L"偏角");
-			auto vR = pRecordSet->GetCollect(L"曲线半径");
-			auto vLs = pRecordSet->GetCollect(L"前缓和曲线");
-			auto vTH = pRecordSet->GetCollect(L"前切线长");
-			auto vLH = pRecordSet->GetCollect(L"曲线长");
-			auto vLJzx = pRecordSet->GetCollect(L"夹直线长");
-			auto vStartMileage = pRecordSet->GetCollect(L"起点里程");
-			auto vEndMileage = pRecordSet->GetCollect(L"终点里程");
-
-			Jd c;
-			c.N = vN;
-			c.E = vE;
-			c.Angle = va;
-			c.R = vR;
-			c.Ls = vLs;
-			c.JdH = vJdH;
-			c.TH = vTH;
-			c.LH = vLH;
-			c.LJzx = vLJzx;
-			c.StartMileage = vStartMileage;
-			c.EndMileage = vEndMileage;
-			jds.push_back(c);
-
-			pRecordSet.MoveNext();
-		}
-
-		for (const auto& c : jds)
-		{
-			ss << L"坐标N: " << c.N << "\t"
-				<< L"坐标E: " << c.E << "\t"
-				<< L"曲线半径: " << c.R << "\t"
-				<< L"缓长: " << c.Ls << "\n";
-		}
-		if (jds.size() > 2)
-		{
-			for (size_t i = 1; i < jds.size() - 1; ++i)
-			{
-				VizRailCore::Point2D jd1 = {jds[i - 1].N, jds[i - 1].E};
-				VizRailCore::Point2D jd2 = {jds[i].N, jds[i].E};
-				VizRailCore::Point2D jd3 = {jds[i + 1].N, jds[i + 1].E};
-				const double r = jds[i].R;
-				const double ls = jds[i].Ls;
-				const double startMileage = jds[i].StartMileage;
-				const double th = jds[i].TH;
-				VizRailCore::Curve curve(jd1, jd2, jd3, r, ls, startMileage + th);
-				ss << L"切线长：" << curve.T_H() << "\t"
-					<< L"曲线长：" << curve.L_H() << "\t"
-					<< L"转角：" << curve.Alpha().Degree() << "\t"
-					<< L"ZH点：" << curve.K(VizRailCore::SpecialPoint::ZH).Value() << "\t"
-					<< L"HY点：" << curve.K(VizRailCore::SpecialPoint::HY).Value() << "\t"
-					<< L"QZ点：" << curve.K(VizRailCore::SpecialPoint::QZ).Value() << "\t"
-					<< L"YH点：" << curve.K(VizRailCore::SpecialPoint::YH).Value() << "\t"
-					<< L"HZ点：" << curve.K(VizRailCore::SpecialPoint::HZ).Value() << "\n";
-			}
-		}
-		auto text = ss.str();
-		MessageBoxW(text.c_str());
+		GetJds(path);
+		SetJdListCtrlContent();
+		JdsToXys();
 	}
 	catch (AccessDatabaseException& e)
 	{

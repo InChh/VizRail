@@ -3,6 +3,7 @@
 
 #include "Coordinate.h"
 #include "Angle.h"
+#include "IMileageToCoordinate.h"
 #include "Mileage.h"
 
 namespace VizRailCore
@@ -17,7 +18,7 @@ namespace VizRailCore
 	};
 
 	/// 曲线类，代表由三个交点确定的带缓和曲线的圆曲线，使用3个交点和曲线半径R、缓和曲线长Ls构造曲线对象后，可计算曲线要素和里程
-	class Curve
+	class Curve : public IMileageToCoordinate
 	{
 	public:
 		Curve(const Point2D jd1, const Point2D jd2, const Point2D jd3,
@@ -58,11 +59,11 @@ namespace VizRailCore
 		/// \return 里程
 		[[nodiscard]] Mileage K(SpecialPoint specialPoint) const;
 
-		bool IsInCurve(const Mileage& mileage) const;
+		bool IsOnIt(const Mileage& mileage) const override;
 
 		bool IsRightTurn() const;
 
-		Point2D MileageToCoordinate(const Mileage& mileage) const;
+		Point2D MileageToCoordinate(const Mileage& mileage) const override;
 
 	private:
 		Point2D _jd1;
@@ -74,6 +75,7 @@ namespace VizRailCore
 
 		enum class PointLocation
 		{
+			Before,
 			ZH,
 			ZH2HY,
 			HY,
@@ -83,6 +85,7 @@ namespace VizRailCore
 			YH,
 			YH2HZ,
 			HZ,
+			After,
 			NotInCurve,
 		};
 
@@ -92,6 +95,4 @@ namespace VizRailCore
 		Point2D CalculateLocalCoordinate(const Mileage& li, PointLocation pointLocation) const;
 	};
 
-	Angle GetAzimuthAngle(const double dx, const double dy);
-	Angle GetAzimuthAngle(const Point2D point1, const Point2D point2);
 }

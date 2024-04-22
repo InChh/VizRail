@@ -102,6 +102,7 @@ namespace VizRailCore
 			return _value < other.Value() && *this == other;
 		}
 
+
 	private:
 		double _value = 0.0;
 		std::wstring _prefix = L"DK";

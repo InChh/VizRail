@@ -36,6 +36,15 @@
     <ClCompile Include="src\DatabaseUtils.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="src\IMileageToCoordinate.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="src\IntermediateLine.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Utils.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="includes\Mileage.h">
@@ -45,6 +54,15 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="includes\Exceptions.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="includes\IMileageToCoordinate.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="includes\IntermediateLine.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="includes\Utils.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

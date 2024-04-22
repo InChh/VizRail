@@ -156,14 +156,20 @@
     <ClCompile Include="includes\Angle.h" />
     <ClCompile Include="includes\Coordinate.h" />
     <ClCompile Include="includes\Curve.h" />
+    <ClCompile Include="src\IMileageToCoordinate.cpp" />
     <ClCompile Include="src\Curve.cpp" />
     <ClCompile Include="src\DatabaseUtils.cpp" />
+    <ClCompile Include="src\IntermediateLine.cpp" />
     <ClCompile Include="src\Mileage.cpp" />
+    <ClCompile Include="src\Utils.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="includes\Exceptions.h" />
+    <ClInclude Include="includes\IMileageToCoordinate.h" />
+    <ClInclude Include="includes\IntermediateLine.h" />
     <ClInclude Include="includes\Mileage.h" />
     <ClInclude Include="includes\DatabaseUtils.h" />
+    <ClInclude Include="includes\Utils.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />
