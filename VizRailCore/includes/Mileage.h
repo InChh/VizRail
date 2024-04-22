@@ -89,7 +89,7 @@ namespace VizRailCore
 
 		bool operator>=(const Mileage& other) const
 		{
-			return _value > other.Value() && *this == other;
+			return _value > other.Value() || *this == other;
 		}
 
 		bool operator<(const Mileage& other) const
@@ -99,7 +99,7 @@ namespace VizRailCore
 
 		bool operator<=(const Mileage& other) const
 		{
-			return _value < other.Value() && *this == other;
+			return _value < other.Value() || *this == other;
 		}
 
 

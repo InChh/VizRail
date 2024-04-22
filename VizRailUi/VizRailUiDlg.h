@@ -50,8 +50,13 @@ private:
 public:
 	void SetJdListCtrlContent();
 	void OnBnClickedButton2();
-//	CListBox _jdListBox;
+	VizRailCore::Point2D MileageToCoordinate(VizRailCore::Mileage mileage);
+	//	CListBox _jdListBox;
 	CListCtrl _jdListCtrl;
 	CEdit _mileageInput;
 	CEdit _coordinateOutput;
+	afx_msg void OnBnClickedButton4();
+//	CView _view;
+	afx_msg VizRailCore::Mileage GetTotalMileage();
+	void OnBnClickedButton5();
 };

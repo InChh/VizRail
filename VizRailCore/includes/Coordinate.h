@@ -35,6 +35,8 @@ namespace VizRailCore
 	class Point2D
 	{
 	public:
+		Point2D() = default;
+
 		Point2D(const double x, const double y) : _x(x), _y(y)
 		{
 		}

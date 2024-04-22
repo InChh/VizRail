@@ -42,12 +42,23 @@ Angle Curve::Beta_0() const
 
 double Curve::T_H() const
 {
-	return m() + (_r + P()) * std::tan((Alpha() / 2.0).Radian());
+	Angle a = Alpha();
+	if (a < Angle::Zero())
+	{
+		a = Angle::FromRadian(-a.Radian());
+	}
+	return m() + (_r + P()) * Angle::Tan((a / 2.0));
 }
 
 double Curve::L_H() const
 {
-	return Alpha().Radian() * _r + _ls;
+	Angle a = Alpha();
+	if (a < Angle::Zero())
+	{
+		a = Angle::FromRadian(-a.Radian());
+	}
+
+	return a.Radian() * _r + _ls;
 }
 
 Mileage Curve::K(const SpecialPoint specialPoint) const
@@ -142,8 +153,8 @@ Point2D Curve::MileageToCoordinate(const Mileage& mileage) const
 	Point2D local = CalculateLocalCoordinate(li, pointLocation);
 
 	// 计算ZH、HZ点坐标
-	const Angle aHZ = GetAzimuthAngle(_jd1, _jd2);
-	const Angle aZH = GetAzimuthAngle(_jd3, _jd2);
+	const Angle aZH = GetAzimuthAngle(_jd1, _jd2);
+	const Angle aHZ = GetAzimuthAngle(_jd3, _jd2);
 	const Point2D HZ = {_jd2.X() - T_H() * Angle::Cos(aHZ), _jd2.Y() - T_H() * Angle::Sin(aHZ)};
 	const Point2D ZH = {_jd2.X() - T_H() * Angle::Cos(aZH), _jd2.Y() - T_H() * Angle::Sin(aZH)};
 

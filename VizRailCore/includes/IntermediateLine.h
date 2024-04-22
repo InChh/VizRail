@@ -32,9 +32,11 @@ namespace VizRailCore
 			_endPoint = endPoint;
 		}
 
+		double L() const;
+
 		bool IsOnIt(const Mileage& mileage) const override
 		{
-			return mileage > _startMileage && mileage < _endMileage;
+			return mileage >= _startMileage && mileage <= _endMileage;
 		}
 
 		Point2D MileageToCoordinate(const Mileage& mileage) const override;
