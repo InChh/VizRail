@@ -5,11 +5,11 @@
 
 namespace VizRailCore
 {
-	class IMileageToCoordinate
+	class LineElement
 	{
 	public:
-		IMileageToCoordinate() = default;
-		virtual ~IMileageToCoordinate() = default;
+		LineElement() = default;
+		virtual ~LineElement() = default;
 
 		virtual bool IsOnIt(const Mileage& mileage) const = 0;
 

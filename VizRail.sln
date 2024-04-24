@@ -18,9 +18,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.editorconfig = .editorconfig
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "VizRailMain", "VizRailMain\VizRailMain.vcxproj", "{99B20388-E19A-4110-8672-C636DA693BE0}"
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "VizRailUi", "VizRailUi\VizRailUi.vcxproj", "{1F8862EA-4526-4F73-98C3-FB4082348FBF}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "VizRailMain", "VizRailMain\VizRailMain.vcxproj", "{F87873B0-2B5D-4D52-8FD5-BE1CDC50B2E3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -46,14 +46,6 @@ Global
 		{55A80732-DA1C-4253-A2EC-6A0B18349BD8}.Release|x64.Build.0 = Release|x64
 		{55A80732-DA1C-4253-A2EC-6A0B18349BD8}.Release|x86.ActiveCfg = Release|Win32
 		{55A80732-DA1C-4253-A2EC-6A0B18349BD8}.Release|x86.Build.0 = Release|Win32
-		{99B20388-E19A-4110-8672-C636DA693BE0}.Debug|x64.ActiveCfg = Debug|x64
-		{99B20388-E19A-4110-8672-C636DA693BE0}.Debug|x64.Build.0 = Debug|x64
-		{99B20388-E19A-4110-8672-C636DA693BE0}.Debug|x86.ActiveCfg = Debug|Win32
-		{99B20388-E19A-4110-8672-C636DA693BE0}.Debug|x86.Build.0 = Debug|Win32
-		{99B20388-E19A-4110-8672-C636DA693BE0}.Release|x64.ActiveCfg = Release|x64
-		{99B20388-E19A-4110-8672-C636DA693BE0}.Release|x64.Build.0 = Release|x64
-		{99B20388-E19A-4110-8672-C636DA693BE0}.Release|x86.ActiveCfg = Release|Win32
-		{99B20388-E19A-4110-8672-C636DA693BE0}.Release|x86.Build.0 = Release|Win32
 		{1F8862EA-4526-4F73-98C3-FB4082348FBF}.Debug|x64.ActiveCfg = Debug|x64
 		{1F8862EA-4526-4F73-98C3-FB4082348FBF}.Debug|x64.Build.0 = Debug|x64
 		{1F8862EA-4526-4F73-98C3-FB4082348FBF}.Debug|x86.ActiveCfg = Debug|Win32
@@ -62,6 +54,14 @@ Global
 		{1F8862EA-4526-4F73-98C3-FB4082348FBF}.Release|x64.Build.0 = Release|x64
 		{1F8862EA-4526-4F73-98C3-FB4082348FBF}.Release|x86.ActiveCfg = Release|Win32
 		{1F8862EA-4526-4F73-98C3-FB4082348FBF}.Release|x86.Build.0 = Release|Win32
+		{F87873B0-2B5D-4D52-8FD5-BE1CDC50B2E3}.Debug|x64.ActiveCfg = Debug|x64
+		{F87873B0-2B5D-4D52-8FD5-BE1CDC50B2E3}.Debug|x64.Build.0 = Debug|x64
+		{F87873B0-2B5D-4D52-8FD5-BE1CDC50B2E3}.Debug|x86.ActiveCfg = Debug|x64
+		{F87873B0-2B5D-4D52-8FD5-BE1CDC50B2E3}.Debug|x86.Build.0 = Debug|x64
+		{F87873B0-2B5D-4D52-8FD5-BE1CDC50B2E3}.Release|x64.ActiveCfg = Release|x64
+		{F87873B0-2B5D-4D52-8FD5-BE1CDC50B2E3}.Release|x64.Build.0 = Release|x64
+		{F87873B0-2B5D-4D52-8FD5-BE1CDC50B2E3}.Release|x86.ActiveCfg = Release|x64
+		{F87873B0-2B5D-4D52-8FD5-BE1CDC50B2E3}.Release|x86.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

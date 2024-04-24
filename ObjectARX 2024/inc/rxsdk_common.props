@@ -6,7 +6,7 @@
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <ItemDefinitionGroup>
-    <Midl>  
+    <Midl>
       <OutputDirectory>
       </OutputDirectory>
       <AdditionalIncludeDirectories>..\..\..\inc-$(Platform);..\..\..\..\inc-$(Platform);..\..\..\..\..\inc-$(Platform);..\..\..\inc;..\..\..\..\inc;..\..\..\..\..\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -20,7 +20,7 @@
       <ProxyFileName>$(IntDir)%(Filename)_p.c</ProxyFileName>
     </Midl>
     <ClCompile>
-      <PreprocessorDefinitions>_ALLOW_RTCc_IN_STL;_WIN32_IE=0x0600;WIN;WIN32;_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES=1;_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES_COUNT=1;_AFXDLL;UNICODE;_UNICODE;_CRT_STDIO_ISO_WIDE_SPECIFIERS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_WIN32_IE=0x0601;WIN;WIN32;_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES=1;_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES_COUNT=1;_AFXDLL;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\..\..\inc-$(Platform);..\..\..\..\inc-$(Platform);..\..\..\..\..\inc-$(Platform);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalUsingDirectories>..\..\..\inc-$(Platform);..\..\..\..\inc-$(Platform);..\..\..\..\..\inc-$(Platform);..\..\..\inc;..\..\..\..\inc;..\..\..\..\..\inc;%(AdditionalUsingDirectories)</AdditionalUsingDirectories>
       <StringPooling>true</StringPooling>
@@ -35,7 +35,6 @@
       <PrecompiledHeaderOutputFile>$(IntDir)$(ProjectName).pch</PrecompiledHeaderOutputFile>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
       <ObjectFileName>$(IntDir)</ObjectFileName>
-      <ProgramDataBaseFileName>$(IntDir)$(TargetName).pdb</ProgramDataBaseFileName>
       <BrowseInformation>
       </BrowseInformation>
       <WarningLevel>Level3</WarningLevel>
@@ -44,7 +43,6 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <CompileAs>Default</CompileAs>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
-      <DisableSpecificWarnings>4456;4457;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>..\..\..\lib-$(Platform);..\..\..\..\lib-$(Platform);..\..\..\..\..\lib-$(Platform);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -55,7 +53,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <ImportLibrary>$(IntDir)$(TargetName).lib</ImportLibrary>
-      <TargetMachine>MachineX86</TargetMachine>
+      <TargetMachine Condition="'$(Platform)'=='x64'">MachineX64</TargetMachine>
       <CLRThreadAttribute>STAThreadingAttribute</CLRThreadAttribute>
       <CLRImageType>ForceIJWImage</CLRImageType>
       <CLRUnmanagedCodeCheck>true</CLRUnmanagedCodeCheck>

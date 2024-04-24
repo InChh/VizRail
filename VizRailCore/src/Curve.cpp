@@ -72,7 +72,7 @@ Mileage Curve::K(const SpecialPoint specialPoint) const
 	case SpecialPoint::QZ:
 		return K(SpecialPoint::ZH) + L_H() / 2;
 	case SpecialPoint::YH:
-		return K(SpecialPoint::HY) + L_H();
+		return K(SpecialPoint::HY) + L_H() - 2 * _ls;
 	case SpecialPoint::HZ:
 		return K(SpecialPoint::YH) + _ls;
 	}
@@ -155,8 +155,8 @@ Point2D Curve::MileageToCoordinate(const Mileage& mileage) const
 	// 计算ZH、HZ点坐标
 	const Angle aZH = GetAzimuthAngle(_jd1, _jd2);
 	const Angle aHZ = GetAzimuthAngle(_jd3, _jd2);
-	const Point2D HZ = {_jd2.X() - T_H() * Angle::Cos(aHZ), _jd2.Y() - T_H() * Angle::Sin(aHZ)};
 	const Point2D ZH = {_jd2.X() - T_H() * Angle::Cos(aZH), _jd2.Y() - T_H() * Angle::Sin(aZH)};
+	const Point2D HZ = {_jd2.X() - T_H() * Angle::Cos(aHZ), _jd2.Y() - T_H() * Angle::Sin(aHZ)};
 
 	if (!IsRightTurn())
 	{
@@ -190,6 +190,11 @@ Point2D Curve::MileageToCoordinate(const Mileage& mileage) const
 	}
 
 	return {x, y};
+}
+
+Point2D Curve::SpecialPointCoordinate(const SpecialPoint specialPoint) const
+{
+	return MileageToCoordinate(K(specialPoint));
 }
 
 Angle Curve::Alpha() const

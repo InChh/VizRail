@@ -3,7 +3,7 @@
 
 #include "Coordinate.h"
 #include "Angle.h"
-#include "IMileageToCoordinate.h"
+#include "LineElement.h"
 #include "Mileage.h"
 
 namespace VizRailCore
@@ -18,13 +18,62 @@ namespace VizRailCore
 	};
 
 	/// 曲线类，代表由三个交点确定的带缓和曲线的圆曲线，使用3个交点和曲线半径R、缓和曲线长Ls构造曲线对象后，可计算曲线要素和里程
-	class Curve : public IMileageToCoordinate
+	class Curve final : public LineElement
 	{
 	public:
 		Curve(const Point2D jd1, const Point2D jd2, const Point2D jd3,
 		      const double R,
-		      const double Ls, const Mileage& jdMileage);
+		      const double Ls, const Mileage& jdMileage = Mileage(0));
 
+		[[nodiscard]] Point2D Jd1() const
+		{
+			return _jd1;
+		}
+
+		void SetJd1(const Point2D& jd1)
+		{
+			_jd1 = jd1;
+		}
+
+		[[nodiscard]] Point2D Jd2() const
+		{
+			return _jd2;
+		}
+
+		void SetJd2(const Point2D& jd2)
+		{
+			_jd2 = jd2;
+		}
+
+		[[nodiscard]] Point2D Jd3() const
+		{
+			return _jd3;
+		}
+
+		void SetJd3(const Point2D& jd3)
+		{
+			_jd3 = jd3;
+		}
+
+		void SetR(const double r)
+		{
+			_r = r;
+		}
+
+		void SetLs(const double ls)
+		{
+			_ls = ls;
+		}
+
+		[[nodiscard]] Mileage JdMileage() const
+		{
+			return _jdMileage;
+		}
+
+		void SetJdMileage(const Mileage& mileage)
+		{
+			_jdMileage = mileage;
+		}
 
 		[[nodiscard]] double R() const
 		{
@@ -48,10 +97,6 @@ namespace VizRailCore
 
 		[[nodiscard]] double L_H() const;
 
-		void SetJdMileage(const Mileage& mileage)
-		{
-			_jdMileage = mileage;
-		}
 
 		/// \brief 特殊点（直缓点，缓圆点，曲中点，圆缓点，缓直点）转里程
 		/// \param specialPoint 特殊点类型
@@ -64,6 +109,8 @@ namespace VizRailCore
 		bool IsRightTurn() const;
 
 		Point2D MileageToCoordinate(const Mileage& mileage) const override;
+
+		Point2D SpecialPointCoordinate(SpecialPoint specialPoint) const;
 
 	private:
 		Point2D _jd1;
@@ -91,8 +138,7 @@ namespace VizRailCore
 
 		PointLocation GetPointLocation(const Mileage& mileage) const;
 		Mileage CalculateDistance(const Mileage& mileage,
-		                                 PointLocation pointLocation) const;
+		                          PointLocation pointLocation) const;
 		Point2D CalculateLocalCoordinate(const Mileage& li, PointLocation pointLocation) const;
 	};
-
 }

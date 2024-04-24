@@ -1,22 +1,35 @@
 #pragma once
 
-class AccessDatabaseException final : public std::exception
+class VizRailCoreException
 {
 public:
-	explicit AccessDatabaseException(const std::wstring& message) : _message(message)
+	explicit VizRailCoreException(const std::wstring& message): _message(message)
 	{
 	}
 
-	[[nodiscard]] const char* what() const override
-	{
-		return "Access database exception";
-	}
+	virtual ~VizRailCoreException() = default;
 
-	[[nodiscard]] const std::wstring& GetMessage() const
+	[[nodiscard]] virtual const std::wstring& GetMessage() const
 	{
 		return _message;
 	}
 
 private:
 	std::wstring _message;
+};
+
+class AccessDatabaseException final : public VizRailCoreException
+{
+public:
+	explicit AccessDatabaseException(const std::wstring& message) : VizRailCoreException(message)
+	{
+	}
+};
+
+class NotInLineException final : public VizRailCoreException
+{
+public:
+	explicit NotInLineException(const std::wstring& message) : VizRailCoreException(message)
+	{
+	}
 };

@@ -8,4 +8,6 @@ namespace VizRailCore
 
 	Angle GetAzimuthAngle(const Point2D point1, const Point2D point2);
 
+	std::wstring String2Wstring(const std::string& str);
+
 }

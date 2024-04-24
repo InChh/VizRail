@@ -16,9 +16,9 @@
 #include <format>
 #include <vector>
 
+#include "EditJdDlg.h"
 #include "Jd.h"
 #include "Utils.h"
-#include "VizRailDrawView.h"
 #include "../VizRailCore/includes/Curve.h"
 #include "../VizRailCore/includes/DatabaseUtils.h"
 #include "../VizRailCore/includes/Exceptions.h"
@@ -87,6 +87,8 @@ BEGIN_MESSAGE_MAP(CVizRailUiDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON2, &CVizRailUiDlg::OnBnClickedButton2)
 	ON_BN_CLICKED(IDC_BUTTON4, &CVizRailUiDlg::OnBnClickedButton4)
 	ON_BN_CLICKED(IDC_BUTTON5, &CVizRailUiDlg::OnBnClickedButton5)
+	ON_NOTIFY(NM_DBLCLK, IDC_LIST2, &CVizRailUiDlg::OnNMDblclkList2)
+	ON_BN_CLICKED(IDC_BUTTON_REFRESH, &CVizRailUiDlg::OnBnClickedButtonRefresh)
 END_MESSAGE_MAP()
 
 
@@ -214,16 +216,10 @@ void CVizRailUiDlg::JdsToXys()
 		size_t i = 1;
 		for (; i < _jds.size() - 1; ++i)
 		{
+			// 遍历交点序列（除了第一个和最后一个交点），分别构造曲线和当前曲线的前一个夹直线
 			VizRailCore::Point2D jd1 = {_jds[i - 1].N, _jds[i - 1].E};
 			VizRailCore::Point2D jd2 = {_jds[i].N, _jds[i].E};
 			VizRailCore::Point2D jd3 = {_jds[i + 1].N, _jds[i + 1].E};
-			// 构造夹直线对象
-			++jzxCount;
-			const double jzxStartMileage = _jds[i - 1].EndMileage;
-			const double jzxEndMileage = _jds[i].StartMileage;
-			auto jzx = std::make_shared<VizRailCore::IntermediateLine>(
-				jd1, jzxStartMileage, jd2, jzxEndMileage);
-			_xys.insert_or_assign(std::format(L"夹直线{}", jzxCount), jzx);
 			// 构造曲线对象
 			++curveCount;
 			const double r = _jds[i].R;
@@ -232,18 +228,42 @@ void CVizRailUiDlg::JdsToXys()
 			const double th = _jds[i].TH;
 			auto curve = std::make_shared<VizRailCore::Curve>(jd1, jd2, jd3, r, ls, startMileage + th);
 			_xys.insert_or_assign(std::format(L"曲线{}", curveCount), curve);
+
+			// 构造夹直线对象
+			++jzxCount;
+			const double jzxStartMileage = _jds[i - 1].EndMileage;
+			const double jzxEndMileage = _jds[i].StartMileage;
+			VizRailCore::Point2D startPoint;
+			if (jzxCount == 1)
+			{
+				// 第一条夹直线的起点为第一个交点
+				startPoint = VizRailCore::Point2D{_jds[i - 1].N, _jds[i - 1].E};
+			}
+			else
+			{
+				// 不是第一条夹直线时，起点为上一条曲线的HZ点
+				const auto lastCurve = std::dynamic_pointer_cast<VizRailCore::Curve>(
+					_xys.at(std::format(L"曲线{}", curveCount - 1)));
+				startPoint = lastCurve->SpecialPointCoordinate(VizRailCore::SpecialPoint::HZ);
+			}
+
+			// 不是最后一条夹直线时，终点为当前曲线的ZH点
+			const VizRailCore::Point2D endPoint = curve->SpecialPointCoordinate(VizRailCore::SpecialPoint::ZH);
+
+			auto jzx = std::make_shared<VizRailCore::IntermediateLine>(
+				startPoint, jzxStartMileage, endPoint, jzxEndMileage);
+			_xys.insert_or_assign(std::format(L"夹直线{}", jzxCount), jzx);
 		}
-		// 构造最后一个夹直线对象，此时索引i指向最后一个交点
-		++jzxCount;
-		auto jd1 = VizRailCore::Point2D{_jds[i - 1].N, _jds[i - 1].E};
-		auto jd2 = VizRailCore::Point2D{_jds[i].N, _jds[i].E};
-		const auto jzxStartMileage = _jds[i - 1].EndMileage;
-		const auto jzxEndMileage = _jds[i].StartMileage;
+		// 构造最后一条夹直线，起点为最后一条曲线的HZ点，终点为最后一个交点
+		const auto lastCurve = std::dynamic_pointer_cast<VizRailCore::Curve>(
+			_xys.at(std::format(L"曲线{}", curveCount)));
+		const VizRailCore::Point2D startPoint = lastCurve->SpecialPointCoordinate(VizRailCore::SpecialPoint::HZ);
+		const VizRailCore::Point2D endPoint = {_jds[i].N, _jds[i].E};
 		auto jzx = std::make_shared<VizRailCore::IntermediateLine>(
-			jd1, jzxStartMileage, jd2, jzxEndMileage);
-		_xys.insert_or_assign(std::format(L"夹直线{}", jzxCount), jzx);
+			startPoint, _jds[i - 1].EndMileage, endPoint, _jds[i].StartMileage);
+		_xys.insert_or_assign(std::format(L"夹直线{}", jzxCount + 1), jzx);
 	}
-	// 只有两个交点时，只构造一个夹直线对象
+	// 只有两个交点时，只构造一个夹直线对象，起点和终点分别为两个交点
 	if (_jds.size() == 2)
 	{
 		VizRailCore::Point2D jd1 = {_jds[0].N, _jds[0].E};
@@ -259,6 +279,7 @@ void CVizRailUiDlg::GetJds(CString path)
 {
 	AccessConnection conn(path.GetString());
 	auto pRecordSet = conn.Execute(L"SELECT * FROM 曲线表");
+	_jds.clear();
 	while (!pRecordSet.IsEof())
 	{
 		auto vJdH = pRecordSet->GetCollect(L"交点号");
@@ -358,7 +379,8 @@ void CVizRailUiDlg::OnBnClickedButton4()
 	{
 		const double mileageValue = std::stod(temp.GetString());
 		const VizRailCore::Mileage mileage(mileageValue);
-		MileageToCoordinate(mileage);
+		const auto point = MileageToCoordinate(mileage);
+		_coordinateOutput.SetWindowTextW(std::format(L"({},{})", point.X(), point.Y()).c_str());
 	}
 	catch (std::invalid_argument& e)
 	{
@@ -368,9 +390,9 @@ void CVizRailUiDlg::OnBnClickedButton4()
 	{
 		MessageBoxW(L"输入的里程值超出double类型所能存储的最大值");
 	}
-	catch (...)
+	catch (NotInLineException& e)
 	{
-		MessageBoxW(L"未知错误");
+		MessageBoxW(e.GetMessageW().c_str());
 	}
 }
 
@@ -382,15 +404,15 @@ VizRailCore::Mileage CVizRailUiDlg::GetTotalMileage()
 
 void CVizRailUiDlg::OnBnClickedButton5()
 {
-	// UINT ID = IDC_DRAW;
-	// CWnd* pWnd = this->GetDlgItem(ID);
-	// CRect rect;
-	// pWnd->GetWindowRect(rect);
-	// this->ScreenToClient(rect);
-	//
+	if (_xys.empty())
+	{
+		MessageBoxW(L"请先读取数据库");
+		return;
+	}
+
 	std::vector<VizRailCore::Point2D> points;
 	const auto totalMileage = GetTotalMileage();
-	for (size_t i = 0; i < totalMileage.Value(); ++i)
+	for (size_t i = 0; i < totalMileage.Value(); i++)
 	{
 		points.push_back(MileageToCoordinate(VizRailCore::Mileage(i)));
 	}
@@ -403,13 +425,66 @@ void CVizRailUiDlg::OnBnClickedButton5()
 	{
 		fs << point.X() << "," << point.Y() << "\n";
 	}
+}
 
-	// const auto pView = dynamic_cast<VizRailDrawView*>(RUNTIME_CLASS(VizRailDrawView)->CreateObject());
-	// pView->SetPoints(points);
-	// if (pView == nullptr)
-	// {
-	// 	MessageBoxW(L"创建视图失败");
-	// 	return;
-	// }
-	// pView->Create(nullptr, nullptr,AFX_WS_DEFAULT_VIEW, rect, this, ID);
+
+void CVizRailUiDlg::OnNMDblclkList2(NMHDR* pNMHDR, LRESULT* pResult)
+{
+	LPNMITEMACTIVATE pNMItemActivate = reinterpret_cast<LPNMITEMACTIVATE>(pNMHDR);
+	const int nItem = pNMItemActivate->iItem;
+	if (nItem != -1)
+	{
+		const CString strN = _jdListCtrl.GetItemText(nItem, 1);
+		const CString strE = _jdListCtrl.GetItemText(nItem, 2);
+		const CString strRadius = _jdListCtrl.GetItemText(nItem, 4);
+		const CString strLs = _jdListCtrl.GetItemText(nItem, 5);
+		Jd jd;
+		jd.N = std::stod(strN.GetString());
+		jd.E = std::stod(strE.GetString());
+		jd.R = std::stod(strRadius.GetString());
+		jd.Ls = std::stod(strLs.GetString());
+		EditJdDlg dlg(jd, this);
+		if (dlg.DoModal() == IDOK)
+		{
+			_jdListCtrl.SetItemText(nItem, 1, std::format(L"{}", dlg._jdData.N).c_str());
+			_jdListCtrl.SetItemText(nItem, 2, std::format(L"{}", dlg._jdData.E).c_str());
+			_jdListCtrl.SetItemText(nItem, 4, std::format(L"{}", dlg._jdData.R).c_str());
+			_jdListCtrl.SetItemText(nItem, 5, std::format(L"{}", dlg._jdData.Ls).c_str());
+		}
+	}
+	*pResult = 0;
+}
+
+void CVizRailUiDlg::RefreshJdsAndXys()
+{
+	const auto count = _jdListCtrl.GetItemCount();
+	_jds.clear();
+	std::vector<Jd> tempJds;
+	for (int i = 0; i < count; ++i)
+	{
+		const CString strJdH = _jdListCtrl.GetItemText(i, 0);
+		const CString strN = _jdListCtrl.GetItemText(i, 1);
+		const CString strE = _jdListCtrl.GetItemText(i, 2);
+		const CString strR = _jdListCtrl.GetItemText(i, 4);
+		const CString strLs = _jdListCtrl.GetItemText(i, 5);
+		Jd jd;
+		jd.JdH = std::stoul(strJdH.GetString());
+		jd.N = std::stod(strN.GetString());
+		jd.E = std::stod(strE.GetString());
+		jd.R = std::stod(strR.GetString());
+		jd.Ls = std::stod(strLs.GetString());
+		tempJds.push_back(jd);
+	}
+	for (int i = 1; i < tempJds.size() - 1; ++i)
+	{
+		const VizRailCore::Point2D jd1 = {tempJds[i - 1].N, tempJds[i - 1].E};
+		const VizRailCore::Point2D jd2 = {tempJds[i].N, tempJds[i].E};
+		const VizRailCore::Point2D jd3 = {tempJds[i + 1].N, tempJds[i + 1].E};
+		const VizRailCore::Curve curve(jd1, jd2, jd3, tempJds[i].R, tempJds[i].Ls);
+	}
+}
+
+void CVizRailUiDlg::OnBnClickedButtonRefresh()
+{
+	RefreshJdsAndXys();
 }

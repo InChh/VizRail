@@ -33,13 +33,10 @@
     <ClInclude Include="pch.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="Jd.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="Utils.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="VizRailDrawView.h">
+    <ClInclude Include="EditJdDlg.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
@@ -56,7 +53,7 @@
     <ClCompile Include="Utils.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="VizRailDrawView.cpp">
+    <ClCompile Include="EditJdDlg.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

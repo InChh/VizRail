@@ -1,9 +1,9 @@
 #pragma once
-#include "IMileageToCoordinate.h"
+#include "LineElement.h"
 
 namespace VizRailCore
 {
-	class IntermediateLine : public IMileageToCoordinate
+	class IntermediateLine final : public LineElement
 	{
 	public:
 		IntermediateLine(const Point2D& startPoint, const Mileage& startMileage, const Point2D& endPoint,

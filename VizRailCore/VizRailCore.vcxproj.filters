@@ -36,13 +36,16 @@
     <ClCompile Include="src\DatabaseUtils.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="src\IMileageToCoordinate.cpp">
+    <ClCompile Include="src\LineElement.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="src\IntermediateLine.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="src\Utils.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="includes\PlaneLine.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
@@ -56,13 +59,19 @@
     <ClInclude Include="includes\Exceptions.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="includes\IMileageToCoordinate.h">
+    <ClInclude Include="includes\LineElement.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="includes\IntermediateLine.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="includes\Utils.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="includes\PlaneLine.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="includes\Jd.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

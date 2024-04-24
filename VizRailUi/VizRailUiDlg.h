@@ -5,9 +5,9 @@
 #include <map>
 #include <memory>
 #include <vector>
-
-#include "Jd.h"
-#include "../VizRailCore/includes/IMileageToCoordinate.h"
+#include "../VizRailCore/includes/Jd.h"
+#include "../VizRailCore/includes/LineElement.h"
+#include "../VizRailCore/includes/Mileage.h"
 
 
 // CVizRailUiDlg 对话框
@@ -45,7 +45,7 @@ public:
 private:
 	CEdit _dbPathEdit;
 	std::vector<Jd> _jds;
-	std::map<std::wstring, std::shared_ptr<VizRailCore::IMileageToCoordinate>> _xys;
+	std::map<std::wstring, std::shared_ptr<VizRailCore::LineElement>> _xys;
 
 public:
 	void SetJdListCtrlContent();
@@ -59,4 +59,7 @@ public:
 //	CView _view;
 	afx_msg VizRailCore::Mileage GetTotalMileage();
 	void OnBnClickedButton5();
+	afx_msg void OnNMDblclkList2(NMHDR* pNMHDR, LRESULT* pResult);
+	afx_msg void RefreshJdsAndXys();
+	void OnBnClickedButtonRefresh();
 };
