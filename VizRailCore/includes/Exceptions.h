@@ -1,15 +1,14 @@
 #pragma once
 
-class VizRailCoreException
+class VizRailCoreException : public std::exception
 {
 public:
 	explicit VizRailCoreException(const std::wstring& message): _message(message)
 	{
 	}
 
-	virtual ~VizRailCoreException() = default;
 
-	[[nodiscard]] virtual const std::wstring& GetMessage() const
+	[[nodiscard]] virtual const std::wstring& GetMsg() const
 	{
 		return _message;
 	}

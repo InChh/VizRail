@@ -97,6 +97,10 @@ namespace VizRailCore
 
 		[[nodiscard]] double L_H() const;
 
+		[[nodiscard]] double Length() const override
+		{
+			return L_H();
+		}
 
 		/// \brief 特殊点（直缓点，缓圆点，曲中点，圆缓点，缓直点）转里程
 		/// \param specialPoint 特殊点类型

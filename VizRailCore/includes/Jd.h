@@ -14,4 +14,6 @@ struct Jd
 	double LJzx;
 	double StartMileage;
 	double EndMileage;
+
+	static double Distance(const Jd& jd1, const Jd& jd2);
 };

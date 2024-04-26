@@ -61,6 +61,13 @@ namespace VizRailCore
 			_y = y;
 		}
 
+		[[nodiscard]] double Distance(const Point2D& other) const;
+
+		static double Distance(const Point2D& p1, const Point2D& p2)
+		{
+			return p1.Distance(p2);
+		}
+
 		std::tuple<double, double> operator-(const Point2D& other) const
 		{
 			return {_x - other._x, _y - other._y};

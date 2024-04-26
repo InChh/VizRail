@@ -27,7 +27,10 @@
     <ClCompile Include="VizRailMain.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="PlaneEntity.cpp">
+    <ClCompile Include="HorizontalAlignmentEntity.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="ProjectService.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
@@ -47,7 +50,7 @@
     <ClInclude Include="Exception.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="PlaneEntity.h">
+    <ClInclude Include="HorizontalAlignmentEntity.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

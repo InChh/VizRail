@@ -32,7 +32,7 @@ namespace VizRailCore
 			_endPoint = endPoint;
 		}
 
-		double L() const;
+		double Length() const override;
 
 		bool IsOnIt(const Mileage& mileage) const override
 		{

@@ -9,13 +9,14 @@
 
 namespace VizRailCore
 {
-	class PlaneLine
+	class HorizontalAlignment
 	{
 	public:
-		PlaneLine() = default;
-		explicit PlaneLine(const std::vector<Jd>& jds);
+		HorizontalAlignment() = default;
+		explicit HorizontalAlignment(const std::vector<Jd>& jds);
 
 		void AddJd(const Jd& jd);
+		void AddJd(const std::vector<Jd>& jds);
 
 		void RemoveJd(const std::vector<Jd>::difference_type index);
 
@@ -23,7 +24,16 @@ namespace VizRailCore
 
 		void UpdateJd(size_t index, const Jd& jd);
 
+		[[nodiscard]] const std::vector<Jd>& GetJds() const
+		{
+			return _jds;
+		}
+
 		void Refresh();
+
+		[[nodiscard]] Point2D MileageToCoordinate(const Mileage& mileage) const;
+
+		[[nodiscard]] double GetTotalMileage() const;
 
 	private:
 		std::vector<Jd> _jds;

@@ -24,8 +24,12 @@
 //-----------------------------------------------------------------------------
 #include "StdAfx.h"
 
+#include "HorizontalAlignmentEntity.h"
 #include "ProjectService.h"
 #include "resource.h"
+#include "../VizRailCore/includes/DatabaseUtils.h"
+#include "../VizRailCore/includes/Exceptions.h"
+#include "../VizRailCore/includes/Jd.h"
 
 //-----------------------------------------------------------------------------
 #define szRDS _RXST("ADSK")
@@ -47,6 +51,14 @@ public:
 		AcRx::AppRetCode retCode = AcRxArxApp::On_kInitAppMsg(pkt);
 
 		// TODO: Add your initialization code here
+		HorizontalAlignmentEntity::rxInit();
+
+		if (!acrxServiceIsRegistered(L"HorizontalAlignmentEntity"))
+		{
+			acrxRegisterService(L"HorizontalAlignmentEntity");
+		}
+
+		acrxBuildClassHierarchy();
 
 		return (retCode);
 	}
@@ -59,6 +71,13 @@ public:
 		AcRx::AppRetCode retCode = AcRxArxApp::On_kUnloadAppMsg(pkt);
 
 		// TODO: Unload dependencies here
+		AcRxObject* obj = acrxServiceDictionary->remove(L"HorizontalAlignmentEntity");
+		if (obj != nullptr)
+			delete obj;
+
+		deleteAcRxClass(HorizontalAlignmentEntity::desc());
+
+		acrxBuildClassHierarchy();
 
 		return (retCode);
 	}
@@ -95,7 +114,68 @@ public:
 
 	static void ADSKVizRailGroupImportPlane()
 	{
-		
+		try
+		{
+			std::vector<Jd> jds;
+			AcString path = ProjectService::GetMdbFilePath();
+			if (path == L"")
+			{
+				return;
+			}
+			AccessConnection conn(path.constPtr());
+			auto pRecordSet = conn.Execute(L"SELECT * FROM 曲线表");
+			jds.clear();
+			while (!pRecordSet.IsEof())
+			{
+				auto vJdH = pRecordSet->GetCollect(L"交点号");
+				auto vN = pRecordSet->GetCollect(L"坐标N");
+				auto vE = pRecordSet->GetCollect(L"坐标E");
+				auto va = pRecordSet->GetCollect(L"偏角");
+				auto vR = pRecordSet->GetCollect(L"曲线半径");
+				auto vLs = pRecordSet->GetCollect(L"前缓和曲线");
+				auto vTH = pRecordSet->GetCollect(L"前切线长");
+				auto vLH = pRecordSet->GetCollect(L"曲线长");
+				auto vLJzx = pRecordSet->GetCollect(L"夹直线长");
+				auto vStartMileage = pRecordSet->GetCollect(L"起点里程");
+				auto vEndMileage = pRecordSet->GetCollect(L"终点里程");
+
+				jds.emplace_back(vJdH,
+				                 vN,
+				                 vE,
+				                 va,
+				                 vR,
+				                 vLs,
+				                 vTH,
+				                 vLH,
+				                 vLJzx,
+				                 vStartMileage,
+				                 vEndMileage
+				);
+				pRecordSet.MoveNext();
+			}
+			const auto pEntity = new HorizontalAlignmentEntity(L"方案1", jds);
+			AcDbObjectId id;
+			AcDbBlockTable* pBlockTable;
+			acdbHostApplicationServices()->workingDatabase()->getSymbolTable(pBlockTable, AcDb::kForRead);
+			AcDbBlockTableRecord* pBlockTableRecord;
+			pBlockTable->getAt(ACDB_MODEL_SPACE, pBlockTableRecord, AcDb::kForWrite);
+			pBlockTable->close();
+			const auto ret = pBlockTableRecord->appendAcDbEntity(id, pEntity);
+			pBlockTableRecord->close();
+			pEntity->close();
+		}
+		catch (AccessDatabaseException& e)
+		{
+			acutPrintf(L"%s", e.GetMsg().c_str());
+		}
+		catch (std::exception& e)
+		{
+			acutPrintf(L"%s", e.what());
+		}
+		catch (...)
+		{
+			acutPrintf(L"未知错误");
+		}
 	}
 };
 
@@ -103,4 +183,5 @@ public:
 IMPLEMENT_ARX_ENTRYPOINT(CVizRailMainApp)
 
 ACED_ARXCOMMAND_ENTRY_AUTO(CVizRailMainApp, ADSKMyGroup, Hello, Hello, ACRX_CMD_MODAL, NULL)
-ACED_ARXCOMMAND_ENTRY_AUTO(CVizRailMainApp, ADSKVizRailGroup, OpenProject, OpenProject, ACRX_CMD_MODAL,NULL)
+ACED_ARXCOMMAND_ENTRY_AUTO(CVizRailMainApp, ADSKVizRailGroup, OpenProject, OpenProject, ACRX_CMD_MODAL, NULL)
+ACED_ARXCOMMAND_ENTRY_AUTO(CVizRailMainApp, ADSKVizRailGroup, ImportPlane, ImportPlane, ACRX_CMD_MODAL, NULL)

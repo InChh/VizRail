@@ -45,7 +45,13 @@
     <ClCompile Include="src\Utils.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="includes\PlaneLine.cpp">
+    <ClCompile Include="src\HorizontalAlignment.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="includes\Coordinate.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="includes\Jd.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
@@ -68,7 +74,7 @@
     <ClInclude Include="includes\Utils.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="includes\PlaneLine.h">
+    <ClInclude Include="includes\HorizontalAlignment.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="includes\Jd.h">
