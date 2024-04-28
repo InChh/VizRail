@@ -17,12 +17,34 @@ HorizontalAlignmentEntity::HorizontalAlignmentEntity(const AcString& name, const
 
 Acad::ErrorStatus HorizontalAlignmentEntity::dwgInFields(AcDbDwgFiler* filer)
 {
-	return Acad::eOk;
+	if (const Acad::ErrorStatus es = AcDbEntity::dwgInFields(filer); es != Acad::eOk)
+	{
+		return es;
+	}
+
+	filer->readItem(_name);
+	int size = 0;
+	filer->readItem(&size);
+	std::vector<Jd> jds(size);
+	filer->readItem(jds.data(), size * sizeof(Jd));
+	_horizontalAlignment.AddJd(jds);
+
+	return filer->filerStatus();
 }
 
 Acad::ErrorStatus HorizontalAlignmentEntity::dwgOutFields(AcDbDwgFiler* filer) const
 {
-	return Acad::eOk;
+	if (const Acad::ErrorStatus es = AcDbEntity::dwgOutFields(filer); es != Acad::eOk)
+	{
+		return es;
+	}
+
+	filer->writeItem(_name);
+	const std::vector<Jd> jds = _horizontalAlignment.GetJds();
+	filer->writeItem(static_cast<int>(jds.size()));
+	filer->writeItem(jds.data(), jds.size() * sizeof(Jd));
+
+	return filer->filerStatus();
 }
 
 Acad::ErrorStatus HorizontalAlignmentEntity::dxfInFields(AcDbDxfFiler* filer)
@@ -42,7 +64,6 @@ Adesk::Boolean HorizontalAlignmentEntity::subWorldDraw(AcGiWorldDraw* pWorldDraw
 		const double totalMileage = _horizontalAlignment.GetTotalMileage();
 
 		std::vector<AcGePoint3d> points(static_cast<size_t>(totalMileage) + 1);
-		// 计算百米标坐标
 		for (int i = 0; i < totalMileage; i += 1)
 		{
 			const VizRailCore::Point2D coordinate = _horizontalAlignment.MileageToCoordinate(i);
@@ -62,7 +83,7 @@ Adesk::Boolean HorizontalAlignmentEntity::subWorldDraw(AcGiWorldDraw* pWorldDraw
 			AcGeVector3d normal(0, 0, 1);
 			AcGeVector3d direction(1, 0, 0);
 			ret = pWorldDraw->geometry().circle(point, 2, normal);
-			ret = pWorldDraw->geometry().text(point, normal, direction, 10.0, 5, 0,
+			ret = pWorldDraw->geometry().text(point, normal, direction, 5.0, 5 / 0.7, 0,
 			                                  std::format(L"JD{}", jds[i].JdH).c_str());
 			jdPoints[i] = {jds[i].E, jds[i].N, 0};
 		}
@@ -131,22 +152,22 @@ Acad::ErrorStatus HorizontalAlignmentEntity::subMoveGripPointsAt(const AcDbIntAr
 	{
 		for (const auto& i : indices)
 		{
-			Jd jd = jds.at(i);
-			jd.E += offset.x;
-			jd.N += offset.y;
-			_horizontalAlignment.UpdateJd(i, jd);
+			_horizontalAlignment.MoveJd(i, offset.y, offset.x);
 		}
 	}
 	catch (const VizRailCoreException& e)
 	{
 		acutPrintf(L"%s", e.GetMsg().c_str());
+		return Acad::eInvalidInput;
 	}
 	catch (const std::exception& e)
 	{
 		acutPrintf(L"%s", e.what());
+		return Acad::eInvalidInput;
 	}catch (...)
 	{
 		acutPrintf(L"未知错误");
+		return Acad::eInvalidInput;
 	}
 	return Acad::eOk;
 }
