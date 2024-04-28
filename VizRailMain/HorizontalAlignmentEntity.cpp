@@ -3,7 +3,9 @@
 
 #include <format>
 
+#include "../VizRailCore/includes/Curve.h"
 #include "../VizRailCore/includes/Exceptions.h"
+#include "../VizRailCore/includes/IntermediateLine.h"
 
 
 ACRX_DXF_DEFINE_MEMBERS(HorizontalAlignmentEntity, AcDbEntity,
@@ -17,12 +19,34 @@ HorizontalAlignmentEntity::HorizontalAlignmentEntity(const AcString& name, const
 
 Acad::ErrorStatus HorizontalAlignmentEntity::dwgInFields(AcDbDwgFiler* filer)
 {
-	return Acad::eOk;
+	if (const Acad::ErrorStatus es = AcDbEntity::dwgInFields(filer); es != Acad::eOk)
+	{
+		return es;
+	}
+
+	filer->readItem(_name);
+	int size = 0;
+	filer->readItem(&size);
+	std::vector<Jd> jds(size);
+	filer->readItem(jds.data(), size * sizeof(Jd));
+	_horizontalAlignment.AddJd(jds);
+
+	return filer->filerStatus();
 }
 
 Acad::ErrorStatus HorizontalAlignmentEntity::dwgOutFields(AcDbDwgFiler* filer) const
 {
-	return Acad::eOk;
+	if (const Acad::ErrorStatus es = AcDbEntity::dwgOutFields(filer); es != Acad::eOk)
+	{
+		return es;
+	}
+
+	filer->writeItem(_name);
+	const std::vector<Jd> jds = _horizontalAlignment.GetJds();
+	filer->writeItem(static_cast<int>(jds.size()));
+	filer->writeItem(jds.data(), jds.size() * sizeof(Jd));
+
+	return filer->filerStatus();
 }
 
 Acad::ErrorStatus HorizontalAlignmentEntity::dxfInFields(AcDbDxfFiler* filer)
@@ -39,39 +63,101 @@ Adesk::Boolean HorizontalAlignmentEntity::subWorldDraw(AcGiWorldDraw* pWorldDraw
 {
 	try
 	{
+		pWorldDraw->subEntityTraits().setLineWeight(AcDb::kLnWt050);
 		const double totalMileage = _horizontalAlignment.GetTotalMileage();
 
-		std::vector<AcGePoint3d> points(static_cast<size_t>(totalMileage) + 1);
-		// 计算百米标坐标
-		for (int i = 0; i < totalMileage; i += 1)
+		std::vector<AcGePoint3d> points;
+		// for (int i = 0; i < totalMileage; i += 1)
+		// {
+		// 	const VizRailCore::Point2D coordinate = _horizontalAlignment.MileageToCoordinate(i);
+		// 	points[i] = {coordinate.X(), coordinate.Y(), 0};
+		// }
+
+		const auto xys = _horizontalAlignment.GetXys();
+		const auto xysOrder = _horizontalAlignment.GetXysOrder();
+
+		for (size_t i = 0; i < xysOrder.size(); ++i)
 		{
-			const VizRailCore::Point2D coordinate = _horizontalAlignment.MileageToCoordinate(i);
-			points[i] = {coordinate.X(), coordinate.Y(), 0};
+			auto xyName = xysOrder[i];
+			const auto xy = xys.at(xyName);
+			if (xyName.find(L"夹直线") != -1)
+			{
+				const auto jzx = std::dynamic_pointer_cast<VizRailCore::IntermediateLine>(xy);
+				const auto startPoint = jzx->StartPoint();
+				const auto endPoint = jzx->EndPoint();
+				pWorldDraw->subEntityTraits().setColor(3);
+				AcGePoint3dArray tmp(2);
+				tmp.append({startPoint.X(), startPoint.Y(), 0});
+				tmp.append({endPoint.X(), endPoint.Y(), 0});
+				pWorldDraw->geometry().polyline(2, tmp.asArrayPtr());
+			}
+			else if (xyName.find(L"曲线") != -1)
+			{
+				const auto qx = std::dynamic_pointer_cast<VizRailCore::Curve>(xy);
+				const auto& mileageZH = qx->K(VizRailCore::SpecialPoint::ZH);
+				const auto& mileageHY = qx->K(VizRailCore::SpecialPoint::HY);
+				const auto& mileageYH = qx->K(VizRailCore::SpecialPoint::YH);
+				const auto& mileageHZ = qx->K(VizRailCore::SpecialPoint::HZ);
+				AcGePoint3dArray transitionTmp1;
+				AcGePoint3dArray transitionTmp2;
+				AcGePoint3dArray curveTmp;
+				const auto ZH = qx->MileageToCoordinate(mileageZH);
+				const auto HY = qx->MileageToCoordinate(mileageHY);
+				const auto YH = qx->MileageToCoordinate(mileageYH);
+				const auto HZ = qx->MileageToCoordinate(mileageHZ);
+
+				// 前缓和曲线
+				for (double j = mileageZH.Value(); j < mileageHY.Value(); j += 1.0)
+				{
+					const auto coordinate = qx->MileageToCoordinate(j);
+					transitionTmp1.append({coordinate.X(), coordinate.Y(), 0});
+				}
+				transitionTmp1.append({HY.X(), HY.Y(), 0});
+
+				// 圆曲线部分
+				for (double j = mileageHY.Value(); j < mileageYH.Value(); j += 1.0)
+				{
+					const auto coordinate = qx->MileageToCoordinate(j);
+					curveTmp.append({coordinate.X(), coordinate.Y(), 0});
+				}
+				curveTmp.append({YH.X(), YH.Y(), 0});
+
+				// 后缓和曲线
+				for (double j = mileageYH.Value(); j < mileageHZ.Value(); j += 1.0)
+				{
+					const auto coordinate = qx->MileageToCoordinate(j);
+					transitionTmp2.append({coordinate.X(), coordinate.Y(), 0});
+				}
+				transitionTmp2.append({HZ.X(), HZ.Y(), 0});
+
+				// 绘图
+				pWorldDraw->subEntityTraits().setColor(2);
+				pWorldDraw->geometry().polyline(transitionTmp1.length(), transitionTmp1.asArrayPtr());
+				pWorldDraw->geometry().polyline(transitionTmp2.length(), transitionTmp2.asArrayPtr());
+
+				pWorldDraw->subEntityTraits().setColor(1);
+				pWorldDraw->geometry().polyline(curveTmp.length(), curveTmp.asArrayPtr());
+			}
 		}
-		const VizRailCore::Point2D lastCoordinate = _horizontalAlignment.MileageToCoordinate(totalMileage);
-		points[points.size() - 1] = {lastCoordinate.X(), lastCoordinate.Y(), 0};
-		AcGiPolyline polyLine(static_cast<int>(points.size()), points.data());
-		pWorldDraw->subEntityTraits().setColor(1);
-		polyLine.setThickness(1);
-		bool ret = pWorldDraw->geometry().polyline(polyLine);
+
+		pWorldDraw->subEntityTraits().setColor(3);
+		pWorldDraw->subEntityTraits().setLineWeight(AcDb::kLnWt020);
 		const auto jds = _horizontalAlignment.GetJds();
-		std::vector<AcGePoint3d> jdPoints(jds.size());
-		for (size_t i = 0; i < jds.size(); ++i)
+		int jdSize = static_cast<int>(jds.size());
+		AcGePoint3dArray jdPoints(static_cast<int>(jdSize));
+		for (int i = 0; i < jdSize; ++i)
 		{
 			AcGePoint3d point(jds[i].E, jds[i].N, 0);
 			AcGeVector3d normal(0, 0, 1);
 			AcGeVector3d direction(1, 0, 0);
-			ret = pWorldDraw->geometry().circle(point, 2, normal);
-			ret = pWorldDraw->geometry().text(point, normal, direction, 10.0, 5, 0,
-			                                  std::format(L"JD{}", jds[i].JdH).c_str());
+			pWorldDraw->geometry().circle(point, 3, normal);
+			pWorldDraw->geometry().text(point, normal, direction, 5.0, 5 / 0.7, 0,
+			                            std::format(L"JD{}", jds[i].JdH).c_str());
 			jdPoints[i] = {jds[i].E, jds[i].N, 0};
 		}
 
-		pWorldDraw->subEntityTraits().setColor(2);
-		AcGiPolyline jdPolyLine(static_cast<int>(jdPoints.size()), jdPoints.data());
-		jdPolyLine.setThickness(0.5);
-		ret = pWorldDraw->geometry().polyline(jdPolyLine);
-		return ret;
+		pWorldDraw->geometry().polyline(jdPoints.length(), jdPoints.asArrayPtr());
+		return true;
 	}
 	catch (const std::invalid_argument& e)
 	{
@@ -131,22 +217,22 @@ Acad::ErrorStatus HorizontalAlignmentEntity::subMoveGripPointsAt(const AcDbIntAr
 	{
 		for (const auto& i : indices)
 		{
-			Jd jd = jds.at(i);
-			jd.E += offset.x;
-			jd.N += offset.y;
-			_horizontalAlignment.UpdateJd(i, jd);
+			_horizontalAlignment.MoveJd(i, offset.y, offset.x);
 		}
 	}
 	catch (const VizRailCoreException& e)
 	{
 		acutPrintf(L"%s", e.GetMsg().c_str());
+		return Acad::eInvalidInput;
 	}
 	catch (const std::exception& e)
 	{
 		acutPrintf(L"%s", e.what());
+		return Acad::eInvalidInput;
 	}catch (...)
 	{
 		acutPrintf(L"未知错误");
+		return Acad::eInvalidInput;
 	}
 	return Acad::eOk;
 }

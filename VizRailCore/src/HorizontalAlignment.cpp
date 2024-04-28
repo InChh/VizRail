@@ -117,7 +117,9 @@ void HorizontalAlignment::RefreshXys()
 			const double r = _jds[i].R;
 			const double ls = _jds[i].Ls;
 			auto curve = std::make_shared<Curve>(jd1, jd2, jd3, r, ls, jdMileages[i]);
-			_xys.insert_or_assign(std::format(L"曲线{}", curveCount), curve);
+			std::wstring key = std::format(L"曲线{}", curveCount);
+			_xys.insert_or_assign(key, curve);
+			_xysOrder.emplace_back(key);
 
 			// 构造夹直线对象
 			++jzxCount;
@@ -148,7 +150,9 @@ void HorizontalAlignment::RefreshXys()
 
 			auto jzx = std::make_shared<IntermediateLine>(
 				startPoint, jzxStartMileage, endPoint, jzxEndMileage);
-			_xys.insert_or_assign(std::format(L"夹直线{}", jzxCount), jzx);
+			key = std::format(L"夹直线{}", jzxCount);
+			_xys.insert_or_assign(key, jzx);
+			_xysOrder.emplace_back(key);
 		}
 
 		// 构造最后一条夹直线，起点为最后一条曲线的HZ点，终点为最后一个交点，起点里程为最后一条曲线的HZ点里程，
@@ -161,7 +165,9 @@ void HorizontalAlignment::RefreshXys()
 		const double endMileage = startMileage + Point2D::Distance(startPoint, endPoint);
 		auto jzx = std::make_shared<IntermediateLine>(
 			startPoint, startMileage, endPoint, endMileage);
-		_xys.insert_or_assign(std::format(L"夹直线{}", jzxCount + 1), jzx);
+		const auto key = std::format(L"夹直线{}", jzxCount + 1);
+		_xys.insert_or_assign(key, jzx);
+		_xysOrder.emplace_back(key);
 	}
 	// 只有两个交点时，只构造一个夹直线对象，起点和终点分别为两个交点
 	if (_jds.size() == 2)

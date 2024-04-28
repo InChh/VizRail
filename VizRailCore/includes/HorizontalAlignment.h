@@ -24,9 +24,26 @@ namespace VizRailCore
 
 		void UpdateJd(size_t index, const Jd& jd);
 
+		void MoveJd(const size_t index, const double offsetN, const double offsetE)
+		{
+			_jds[index].N += offsetN;
+			_jds[index].E += offsetE;
+			RefreshXys();
+		}
+
 		[[nodiscard]] const std::vector<Jd>& GetJds() const
 		{
 			return _jds;
+		}
+
+		[[nodiscard]] const std::map<std::wstring, std::shared_ptr<LineElement>>& GetXys() const
+		{
+			return _xys;
+		}
+
+		[[nodiscard]] const std::vector<std::wstring>& GetXysOrder() const
+		{
+			return _xysOrder;
 		}
 
 		void Refresh();
@@ -38,6 +55,7 @@ namespace VizRailCore
 	private:
 		std::vector<Jd> _jds;
 		std::map<std::wstring, std::shared_ptr<LineElement>> _xys;
+		std::vector<std::wstring> _xysOrder;
 
 		void RefreshXys();
 	};
