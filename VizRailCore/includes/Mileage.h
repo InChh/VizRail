@@ -15,7 +15,7 @@ namespace VizRailCore
 	{
 	public:
 		Mileage(const double value, const MileageUnit unit = MileageUnit::Meter,
-		        const std::wstring& prefix = L"DK")
+		        const std::wstring& prefix = L"AK")
 		{
 			SetValue(value, unit);
 			SetPrefix(prefix);
@@ -67,6 +67,23 @@ namespace VizRailCore
 			return Mileage(_value - value, MileageUnit::Meter, _prefix);
 		}
 
+		Mileage operator*(const double value) const
+		{
+			return Mileage(_value * value, MileageUnit::Meter, _prefix);
+		}
+
+		Mileage operator/(const double value) const
+		{
+			if (value <= 0.0)
+			{
+				throw std::invalid_argument("rhs can not be negative or zero");
+			}
+
+
+			return Mileage(_value / value, MileageUnit::Meter, _prefix);
+		}
+
+
 		Mileage operator+(const Mileage& other) const
 		{
 			return *this + other.Value();
@@ -75,6 +92,16 @@ namespace VizRailCore
 		Mileage operator-(const Mileage& other) const
 		{
 			return *this - other.Value();
+		}
+
+		Mileage operator*(const Mileage& other) const
+		{
+			return *this * other.Value();
+		}
+
+		Mileage operator/(const Mileage& other) const
+		{
+			return *this / other.Value();
 		}
 
 		bool operator==(const Mileage& other) const
@@ -101,7 +128,6 @@ namespace VizRailCore
 		{
 			return _value < other.Value() || *this == other;
 		}
-
 
 	private:
 		double _value = 0.0;

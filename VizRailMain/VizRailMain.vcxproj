@@ -70,9 +70,9 @@
       <InlineFunctionExpansion Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Default</InlineFunctionExpansion>
       <IntrinsicFunctions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</IntrinsicFunctions>
       <FavorSizeOrSpeed Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Neither</FavorSizeOrSpeed>
-      <OmitFramePointers Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</OmitFramePointers>
       <EnableFiberSafeOptimizations Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</EnableFiberSafeOptimizations>
       <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</WholeProgramOptimization>
+      <OmitFramePointers Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</OmitFramePointers>
     </ClCompile>
     <Link>
     </Link>

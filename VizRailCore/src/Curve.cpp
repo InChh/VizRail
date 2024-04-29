@@ -4,6 +4,7 @@
 #include <cmath>
 #include <stdexcept>
 
+#include "Exceptions.h"
 #include "Utils.h"
 
 using namespace VizRailCore;
@@ -92,15 +93,27 @@ bool Curve::IsRightTurn() const
 Mileage Curve::CalculateDistance(const Mileage& mileage, const PointLocation pointLocation) const
 {
 	Mileage li = 0.0;
-	if (pointLocation == PointLocation::ZH2HY || pointLocation == PointLocation::HY2QZ)
+	switch (pointLocation)
 	{
+	case PointLocation::ZH:
+		li = 0.0;
+		break;
+	case PointLocation::ZH2HY:
+	case PointLocation::HY:
+	case PointLocation::HY2QZ:
+	case PointLocation::QZ:
 		// 在曲线前半段，计算点到ZH点的距离
 		li = mileage - K(SpecialPoint::ZH);
-	}
-	else if (pointLocation == PointLocation::QZ2YH || pointLocation == PointLocation::YH2HZ)
-	{
+		break;
+	case PointLocation::QZ2YH:
+	case PointLocation::YH:
+	case PointLocation::YH2HZ:
 		// 在曲线后半段，计算点到HZ点的距离
 		li = K(SpecialPoint::HZ) - mileage;
+		break;
+	case PointLocation::HZ:
+		li = 0.0;
+		break;
 	}
 	return li;
 }
@@ -114,8 +127,6 @@ Point2D Curve::CalculateLocalCoordinate(const Mileage& li, const Curve::PointLoc
 	// 在缓和曲线上，利用缓和曲线公式计算局部坐标
 	case PointLocation::ZH:
 	case PointLocation::ZH2HY:
-	case PointLocation::HY:
-	case PointLocation::YH:
 	case PointLocation::YH2HZ:
 	case PointLocation::HZ:
 		{
@@ -124,9 +135,12 @@ Point2D Curve::CalculateLocalCoordinate(const Mileage& li, const Curve::PointLoc
 			break;
 		}
 	// 在圆曲线上，利用圆曲线公式计算局部坐标
+	case PointLocation::HY:
 	case PointLocation::HY2QZ:
 	case PointLocation::QZ:
 	case PointLocation::QZ2YH:
+	case PointLocation::YH:
+
 		{
 			const double phi = (li.Value() - 0.5 * _ls) / _r;
 			xi = m() + _r * std::sin(phi);
@@ -190,6 +204,50 @@ Point2D Curve::MileageToCoordinate(const Mileage& mileage) const
 	}
 
 	return {x, y};
+}
+
+Angle Curve::MileageToAzimuthAngle(const Mileage& mileage) const
+{
+	const PointLocation pointLocation = GetPointLocation(mileage);
+	if (pointLocation == PointLocation::NotInCurve)
+	{
+		throw VizRailCoreException(L"该里程不在这条曲线上");
+	}
+
+	const Mileage li = CalculateDistance(mileage, pointLocation);
+
+	const Angle aZH = GetAzimuthAngle(_jd1, _jd2);
+	const Angle aHZ = GetAzimuthAngle(_jd3, _jd2);
+	double G = 1.0;
+	if (!IsRightTurn())
+	{
+		G = -G;
+	}
+
+	switch (pointLocation)
+	{
+	case PointLocation::ZH:
+		return aZH;
+	case PointLocation::ZH2HY:
+	case PointLocation::HY:
+		// 前缓和曲线
+		return aZH + Angle::FromRadian(((li * li) / (2 * _r * _ls)).Value() * G);
+	case PointLocation::HY2QZ:
+	case PointLocation::QZ:
+	case PointLocation::QZ2YH:
+		// 圆曲线
+		return aZH + Angle::FromRadian((li / _r + Beta_0().Radian()).Value() * G);
+	case PointLocation::YH:
+	case PointLocation::YH2HZ:
+		// 后缓和曲线
+		return aHZ - Angle::FromRadian(((li * li) / (2 * _r * _ls)).Value() * G);
+	case PointLocation::HZ:
+		return aHZ;
+	default:
+		break;
+	}
+
+	throw VizRailCoreException(L"不可能到达的执行路径");
 }
 
 Point2D Curve::SpecialPointCoordinate(const SpecialPoint specialPoint) const

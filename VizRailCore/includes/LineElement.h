@@ -16,5 +16,7 @@ namespace VizRailCore
 		virtual bool IsOnIt(const Mileage& mileage) const = 0;
 
 		virtual Point2D MileageToCoordinate(const Mileage& mileage) const = 0;
+
+		virtual Angle MileageToAzimuthAngle(const Mileage& mileage) const = 0;
 	};
 }

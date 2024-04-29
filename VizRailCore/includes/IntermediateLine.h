@@ -1,4 +1,5 @@
 #pragma once
+#include "Angle.h"
 #include "LineElement.h"
 
 namespace VizRailCore
@@ -32,6 +33,26 @@ namespace VizRailCore
 			_endPoint = endPoint;
 		}
 
+		[[nodiscard]] Mileage StartMileage() const
+		{
+			return _startMileage;
+		}
+
+		void SetStartMileage(const Mileage& startMileage)
+		{
+			_startMileage = startMileage;
+		}
+
+		[[nodiscard]] Mileage EndMileage() const
+		{
+			return _endMileage;
+		}
+
+		void SetEndMileage(const Mileage& endMileage)
+		{
+			_endMileage = endMileage;
+		}
+
 		double Length() const override;
 
 		bool IsOnIt(const Mileage& mileage) const override
@@ -40,6 +61,8 @@ namespace VizRailCore
 		}
 
 		Point2D MileageToCoordinate(const Mileage& mileage) const override;
+
+		Angle MileageToAzimuthAngle(const Mileage& mileage) const override;
 
 	private:
 		Point2D _startPoint;

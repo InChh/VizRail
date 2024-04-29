@@ -114,6 +114,8 @@ namespace VizRailCore
 
 		Point2D MileageToCoordinate(const Mileage& mileage) const override;
 
+		Angle MileageToAzimuthAngle(const Mileage& mileage) const override;
+
 		Point2D SpecialPointCoordinate(SpecialPoint specialPoint) const;
 
 	private:
@@ -126,7 +128,6 @@ namespace VizRailCore
 
 		enum class PointLocation
 		{
-			Before,
 			ZH,
 			ZH2HY,
 			HY,
@@ -136,7 +137,6 @@ namespace VizRailCore
 			YH,
 			YH2HZ,
 			HZ,
-			After,
 			NotInCurve,
 		};
 

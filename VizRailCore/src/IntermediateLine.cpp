@@ -1,5 +1,7 @@
 #include "IntermediateLine.h"
 
+#include "Utils.h"
+
 using namespace VizRailCore;
 
 double IntermediateLine::Length() const
@@ -19,4 +21,9 @@ Point2D IntermediateLine::MileageToCoordinate(const Mileage& mileage) const
 	const double yi = dy * li.Value() / length;
 
 	return {_startPoint.X() + xi, _startPoint.Y() + yi};
+}
+
+Angle IntermediateLine::MileageToAzimuthAngle(const Mileage& mileage) const
+{
+	return GetAzimuthAngle(_startPoint, _endPoint);
 }
