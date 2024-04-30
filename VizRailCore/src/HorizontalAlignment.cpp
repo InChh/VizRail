@@ -173,6 +173,8 @@ void HorizontalAlignment::RefreshXys()
 		const double endMileage = startMileage + Point2D::Distance(startPoint, endPoint);
 		auto jzx = std::make_shared<IntermediateLine>(
 			startPoint, startMileage, endPoint, endMileage);
+		_jds[i].StartMileage = endMileage;
+		_jds[i].EndMileage = endMileage;
 		const auto key = std::format(L"夹直线{}", jzxCount + 1);
 		_xys.insert_or_assign(key, jzx);
 		_xysOrder.emplace_back(key);

@@ -79,7 +79,7 @@ Adesk::Boolean HorizontalAlignmentEntity::subWorldDraw(AcGiWorldDraw* pWorldDraw
 		const auto xys = _horizontalAlignment.GetXys();
 		bool ret = false;
 
-		AcGeVector3d normal(0, 0, 1);
+		const AcGeVector3d normal(0, 0, 1);
 		for (const auto& [xyName,xy] : xys)
 		{
 			if (xyName.find(L"夹直线") != -1)
@@ -97,7 +97,7 @@ Adesk::Boolean HorizontalAlignmentEntity::subWorldDraw(AcGiWorldDraw* pWorldDraw
 		pWorldDraw->subEntityTraits().setColor(3);
 		pWorldDraw->subEntityTraits().setLineWeight(AcDb::kLnWt025);
 		const auto jds = _horizontalAlignment.GetJds();
-		int jdSize = static_cast<int>(jds.size());
+		const int jdSize = static_cast<int>(jds.size());
 		AcGePoint3dArray jdPoints(jdSize);
 		for (int i = 0; i < jdSize; ++i)
 		{
@@ -285,6 +285,7 @@ bool HorizontalAlignmentEntity::DrawCurve(const AcGiWorldDraw* pWorldDraw,
 	const auto HZ = qx->MileageToCoordinate(mileageHZ);
 	const auto aHZ = qx->MileageToAzimuthAngle(mileageHZ);
 
+	pWorldDraw->subEntityTraits().setLineWeight(AcDb::kLnWt050);
 	// 前缓和曲线
 	for (double j = mileageZH.Value(); j < mileageHY.Value(); ++j)
 	{
@@ -292,6 +293,8 @@ bool HorizontalAlignmentEntity::DrawCurve(const AcGiWorldDraw* pWorldDraw,
 		transitionTmp1.append({coordinate.X(), coordinate.Y(), 0});
 	}
 	transitionTmp1.append({HY.X(), HY.Y(), 0});
+	pWorldDraw->subEntityTraits().setColor(2);
+	ret = pWorldDraw->geometry().polyline(transitionTmp1.length(), transitionTmp1.asArrayPtr());
 
 	// 圆曲线部分
 	for (double j = mileageHY.Value(); j < mileageYH.Value(); ++j)
@@ -300,6 +303,8 @@ bool HorizontalAlignmentEntity::DrawCurve(const AcGiWorldDraw* pWorldDraw,
 		curveTmp.append({coordinate.X(), coordinate.Y(), 0});
 	}
 	curveTmp.append({YH.X(), YH.Y(), 0});
+	pWorldDraw->subEntityTraits().setColor(1);
+	ret = pWorldDraw->geometry().polyline(curveTmp.length(), curveTmp.asArrayPtr());
 
 	// 后缓和曲线
 	for (double j = mileageYH.Value(); j < mileageHZ.Value(); ++j)
@@ -308,19 +313,13 @@ bool HorizontalAlignmentEntity::DrawCurve(const AcGiWorldDraw* pWorldDraw,
 		transitionTmp2.append({coordinate.X(), coordinate.Y(), 0});
 	}
 	transitionTmp2.append({HZ.X(), HZ.Y(), 0});
-
-	// 绘图
-	pWorldDraw->subEntityTraits().setLineWeight(AcDb::kLnWt050);
 	pWorldDraw->subEntityTraits().setColor(2);
-	ret = pWorldDraw->geometry().polyline(transitionTmp1.length(), transitionTmp1.asArrayPtr());
 	ret = pWorldDraw->geometry().polyline(transitionTmp2.length(), transitionTmp2.asArrayPtr());
 
-	pWorldDraw->subEntityTraits().setColor(1);
-	ret = pWorldDraw->geometry().polyline(curveTmp.length(), curveTmp.asArrayPtr());
 	ret = DrawHectoMeter(pWorldDraw, qx, mileageZH.Value(), mileageHZ.Value());
-	ret =MileageMark(pWorldDraw, {ZH.X(), ZH.Y(), 0}, aZH, AcString(std::format(L" ZH {}", mileageZH.GetString())));
-	ret =MileageMark(pWorldDraw, {HY.X(), HY.Y(), 0}, aHY, AcString(std::format(L" HY {}", mileageHY.GetString())));
-	ret =MileageMark(pWorldDraw, {YH.X(), YH.Y(), 0}, aYH, AcString(std::format(L" YH {}", mileageYH.GetString())));
-	ret =MileageMark(pWorldDraw, {HZ.X(), HZ.Y(), 0}, aHZ, AcString(std::format(L" HZ {}", mileageHZ.GetString())));
+	ret = MileageMark(pWorldDraw, {ZH.X(), ZH.Y(), 0}, aZH, AcString(std::format(L" ZH {}", mileageZH.GetString())));
+	ret = MileageMark(pWorldDraw, {HY.X(), HY.Y(), 0}, aHY, AcString(std::format(L" HY {}", mileageHY.GetString())));
+	ret = MileageMark(pWorldDraw, {YH.X(), YH.Y(), 0}, aYH, AcString(std::format(L" YH {}", mileageYH.GetString())));
+	ret = MileageMark(pWorldDraw, {HZ.X(), HZ.Y(), 0}, aHZ, AcString(std::format(L" HZ {}", mileageHZ.GetString())));
 	return ret;
 }

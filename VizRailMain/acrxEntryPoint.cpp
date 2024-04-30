@@ -113,7 +113,7 @@ public:
 		ProjectService::OpenProject();
 	}
 
-	static void ADSKVizRailGroupImportPlane()
+	static void ADSKVizRailGroupImportHorizontal()
 	{
 		try
 		{
@@ -179,6 +179,37 @@ public:
 			acutPrintf(L"未知错误");
 		}
 	}
+
+	static void ADSKVizRailGroupSaveHorizontal()
+	{
+		// 选择平面实体
+		ads_name en;
+		ads_point pt;
+		AcDbObjectId objId;
+		AcDbEntity* pEntity;
+		if (acedEntSel(L"\nSelect a horizontal alignment entity:", en, pt) != RTNORM)
+		{
+			return;
+		}
+		// 判断实体类型
+		if (acdbGetObjectId(objId, en) != Acad::eOk)
+		{
+			return;
+		}
+		if (acdbOpenAcDbEntity(pEntity, objId, AcDb::kForRead) != Acad::eOk)
+		{
+			return;
+		}
+		if (pEntity->isKindOf(HorizontalAlignmentEntity::desc()) == false)
+		{
+			acutPrintf(L"请选择平面实体");
+			pEntity->close();
+			return;
+		}
+
+		AcString path = ProjectService::GetMdbFilePath();
+		AccessConnection conn(path.constPtr());
+	}
 };
 
 //-----------------------------------------------------------------------------
@@ -186,4 +217,5 @@ IMPLEMENT_ARX_ENTRYPOINT(CVizRailMainApp)
 
 ACED_ARXCOMMAND_ENTRY_AUTO(CVizRailMainApp, ADSKMyGroup, Hello, Hello, ACRX_CMD_MODAL, NULL)
 ACED_ARXCOMMAND_ENTRY_AUTO(CVizRailMainApp, ADSKVizRailGroup, OpenProject, OpenProject, ACRX_CMD_MODAL, NULL)
-ACED_ARXCOMMAND_ENTRY_AUTO(CVizRailMainApp, ADSKVizRailGroup, ImportPlane, ImportPlane, ACRX_CMD_MODAL, NULL)
+ACED_ARXCOMMAND_ENTRY_AUTO(CVizRailMainApp, ADSKVizRailGroup, ImportHorizontal, ImportHorizontal, ACRX_CMD_MODAL, NULL)
+ACED_ARXCOMMAND_ENTRY_AUTO(CVizRailMainApp, ADSKVizRailGroup, SaveHorizontal, SaveHorizontal, ACRX_CMD_MODAL, NULL)
