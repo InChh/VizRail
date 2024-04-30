@@ -117,6 +117,14 @@ void HorizontalAlignment::RefreshXys()
 			const double r = _jds[i].R;
 			const double ls = _jds[i].Ls;
 			auto curve = std::make_shared<Curve>(jd1, jd2, jd3, r, ls, jdMileages[i]);
+
+			const auto th = curve->T_H();
+			const auto lh = curve->L_H();
+			_jds[i].StartMileage = jdMileages[i] - th;
+			_jds[i].EndMileage = jdMileages[i] + th;
+			_jds[i].TH = th;
+			_jds[i].LH = lh;
+
 			std::wstring key = std::format(L"曲线{}", curveCount);
 			_xys.insert_or_assign(key, curve);
 			_xysOrder.emplace_back(key);

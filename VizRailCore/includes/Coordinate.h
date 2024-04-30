@@ -73,6 +73,8 @@ namespace VizRailCore
 			return {_x - other._x, _y - other._y};
 		}
 
+		bool operator==(const Point2D& other) const;
+
 	private:
 		double _x = 0;
 		double _y = 0;

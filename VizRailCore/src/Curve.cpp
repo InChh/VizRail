@@ -217,7 +217,7 @@ Angle Curve::MileageToAzimuthAngle(const Mileage& mileage) const
 	const Mileage li = CalculateDistance(mileage, pointLocation);
 
 	const Angle aZH = GetAzimuthAngle(_jd1, _jd2);
-	const Angle aHZ = GetAzimuthAngle(_jd3, _jd2);
+	const Angle aHZ = GetAzimuthAngle(_jd2, _jd3);
 	double G = 1.0;
 	if (!IsRightTurn())
 	{
@@ -236,7 +236,7 @@ Angle Curve::MileageToAzimuthAngle(const Mileage& mileage) const
 	case PointLocation::QZ:
 	case PointLocation::QZ2YH:
 		// 圆曲线
-		return aZH + Angle::FromRadian((li / _r + Beta_0().Radian()).Value() * G);
+		return aZH + Angle::FromRadian(((li - _ls) / _r + _ls / (2 * _r)).Value() * G);
 	case PointLocation::YH:
 	case PointLocation::YH2HZ:
 		// 后缓和曲线

@@ -71,93 +71,26 @@ Acad::ErrorStatus HorizontalAlignmentEntity::dxfOutFields(AcDbDxfFiler* filer) c
 	return Acad::eOk;
 }
 
+
 Adesk::Boolean HorizontalAlignmentEntity::subWorldDraw(AcGiWorldDraw* pWorldDraw)
 {
 	try
 	{
-		pWorldDraw->subEntityTraits().setLineWeight(AcDb::kLnWt050);
-
 		const auto xys = _horizontalAlignment.GetXys();
-		const auto xysOrder = _horizontalAlignment.GetXysOrder();
+		bool ret = false;
 
 		AcGeVector3d normal(0, 0, 1);
-		for (size_t i = 0; i < xysOrder.size(); ++i)
+		for (const auto& [xyName,xy] : xys)
 		{
-			auto xyName = xysOrder[i];
-			const auto xy = xys.at(xyName);
 			if (xyName.find(L"夹直线") != -1)
 			{
 				const auto jzx = std::dynamic_pointer_cast<VizRailCore::IntermediateLine>(xy);
-				const auto startPoint = jzx->StartPoint();
-				const auto endPoint = jzx->EndPoint();
-				pWorldDraw->subEntityTraits().setColor(3);
-				AcGePoint3dArray tmp(2);
-				tmp.append({startPoint.X(), startPoint.Y(), 0});
-				tmp.append({endPoint.X(), endPoint.Y(), 0});
-				pWorldDraw->geometry().polyline(2, tmp.asArrayPtr());
-
-				// 直线百米标
-				for (int i =static_cast<int>(jzx->StartMileage().Value()); i < jzx->EndMileage().Value(); i += 100)
-				{
-					const auto coordinate = jzx->MileageToCoordinate(i);
-					const auto azimuthAngle = jzx->MileageToAzimuthAngle(i);
-					AcGePoint3dArray tmp1(2);
-					const double dx = 10 * VizRailCore::Angle::Cos(azimuthAngle - VizRailCore::Angle::HalfPi());
-					const double dy = 10 * VizRailCore::Angle::Sin(azimuthAngle - VizRailCore::Angle::HalfPi());
-					tmp1[0] = {coordinate.X(), coordinate.Y(), 0};
-					tmp1[1] = {coordinate.X() + dx, coordinate.Y() + dy, 0};
-					pWorldDraw->geometry().polyline(2, tmp1.asArrayPtr());
-					AcGeVector3d direction(dx, dy, 0);
-					pWorldDraw->geometry().text(tmp1[1], normal, direction, 7.0, 1,
-					                            0, VizRailCore::Mileage(i).GetString().c_str());
-				}
+				ret = DrawIntermediateLine(pWorldDraw, jzx);
 			}
 			else if (xyName.find(L"曲线") != -1)
 			{
 				const auto qx = std::dynamic_pointer_cast<VizRailCore::Curve>(xy);
-				const auto& mileageZH = qx->K(VizRailCore::SpecialPoint::ZH);
-				const auto& mileageHY = qx->K(VizRailCore::SpecialPoint::HY);
-				const auto& mileageYH = qx->K(VizRailCore::SpecialPoint::YH);
-				const auto& mileageHZ = qx->K(VizRailCore::SpecialPoint::HZ);
-				AcGePoint3dArray transitionTmp1;
-				AcGePoint3dArray transitionTmp2;
-				AcGePoint3dArray curveTmp;
-				const auto ZH = qx->MileageToCoordinate(mileageZH);
-				const auto HY = qx->MileageToCoordinate(mileageHY);
-				const auto YH = qx->MileageToCoordinate(mileageYH);
-				const auto HZ = qx->MileageToCoordinate(mileageHZ);
-
-				// 前缓和曲线
-				for (double j = mileageZH.Value(); j < mileageHY.Value(); j += 1.0)
-				{
-					const auto coordinate = qx->MileageToCoordinate(j);
-					transitionTmp1.append({coordinate.X(), coordinate.Y(), 0});
-				}
-				transitionTmp1.append({HY.X(), HY.Y(), 0});
-
-				// 圆曲线部分
-				for (double j = mileageHY.Value(); j < mileageYH.Value(); j += 1.0)
-				{
-					const auto coordinate = qx->MileageToCoordinate(j);
-					curveTmp.append({coordinate.X(), coordinate.Y(), 0});
-				}
-				curveTmp.append({YH.X(), YH.Y(), 0});
-
-				// 后缓和曲线
-				for (double j = mileageYH.Value(); j < mileageHZ.Value(); j += 1.0)
-				{
-					const auto coordinate = qx->MileageToCoordinate(j);
-					transitionTmp2.append({coordinate.X(), coordinate.Y(), 0});
-				}
-				transitionTmp2.append({HZ.X(), HZ.Y(), 0});
-
-				// 绘图
-				pWorldDraw->subEntityTraits().setColor(2);
-				pWorldDraw->geometry().polyline(transitionTmp1.length(), transitionTmp1.asArrayPtr());
-				pWorldDraw->geometry().polyline(transitionTmp2.length(), transitionTmp2.asArrayPtr());
-
-				pWorldDraw->subEntityTraits().setColor(1);
-				pWorldDraw->geometry().polyline(curveTmp.length(), curveTmp.asArrayPtr());
+				ret = DrawCurve(pWorldDraw, qx);
 			}
 		}
 
@@ -169,16 +102,15 @@ Adesk::Boolean HorizontalAlignmentEntity::subWorldDraw(AcGiWorldDraw* pWorldDraw
 		for (int i = 0; i < jdSize; ++i)
 		{
 			AcGePoint3d point(jds[i].E, jds[i].N, 0);
-			AcGeVector3d normal(0, 0, 1);
 			AcGeVector3d direction(1, 0, 0);
-			pWorldDraw->geometry().circle(point, 3, normal);
-			pWorldDraw->geometry().text(point, normal, direction, 7.0, 1, 0,
-			                            std::format(L"JD{}", jds[i].JdH).c_str());
-			jdPoints[i] = {jds[i].E, jds[i].N, 0};
+			ret = pWorldDraw->geometry().circle(point, 2, normal);
+			ret = pWorldDraw->geometry().text(point, normal, direction, 7.0, 1, 0,
+			                                  std::format(L"  JD{}", i).c_str());
+			jdPoints.append({jds[i].E, jds[i].N, 0});
 		}
 
-		const auto ret = pWorldDraw->geometry().polyline(jdPoints.length(), jdPoints.asArrayPtr());
-		return true;
+		ret = pWorldDraw->geometry().polyline(jdPoints.length(), jdPoints.asArrayPtr());
+		return ret;
 	}
 	catch (const std::invalid_argument& e)
 	{
@@ -261,4 +193,134 @@ Acad::ErrorStatus HorizontalAlignmentEntity::subMoveGripPointsAt(const AcDbIntAr
 Acad::ErrorStatus HorizontalAlignmentEntity::subGetGeomExtents(AcDbExtents& extents) const
 {
 	return Acad::eOk;
+}
+
+bool HorizontalAlignmentEntity::DrawHectoMeter(const AcGiWorldDraw* pWorldDraw,
+                                               const std::shared_ptr<VizRailCore::LineElement>& line,
+                                               const double startMileage, const double endMileage)
+{
+	bool ret = false;
+	pWorldDraw->subEntityTraits().setColor(3);
+	pWorldDraw->subEntityTraits().setLineWeight(AcDb::kLnWt015);
+	const AcGeVector3d normal(0, 0, 1);
+	for (int i = (static_cast<int>(startMileage) / 100 + 1) * 100; i < endMileage; i += 100)
+	{
+		const auto coordinate = line->MileageToCoordinate(i);
+		const auto azimuthAngle = line->MileageToAzimuthAngle(i);
+		AcGePoint3dArray tmp1(2);
+		const double dx = 10 * VizRailCore::Angle::Cos(azimuthAngle - VizRailCore::Angle::HalfPi());
+		const double dy = 10 * VizRailCore::Angle::Sin(azimuthAngle - VizRailCore::Angle::HalfPi());
+		tmp1[0] = {coordinate.X(), coordinate.Y(), 0};
+		tmp1[1] = {coordinate.X() + dx, coordinate.Y() + dy, 0};
+		ret = pWorldDraw->geometry().polyline(2, tmp1.asArrayPtr());
+		AcGeVector3d direction(dx, dy, 0);
+		if (i % 1000 == 0)
+		{
+			VizRailCore::Mileage mileage(i);
+			auto prefix = mileage.Prefix();
+			auto km = i / 1000;
+			ret = pWorldDraw->geometry().text(tmp1[1], normal, direction, 7.0, 1,
+			                                  0, std::format(L"  {} {}", prefix, km).c_str());
+		}
+		else
+		{
+			int m = (i / 100) % 10;
+			ret = pWorldDraw->geometry().text(tmp1[1], normal, direction, 7.0, 1,
+			                                  0, std::format(L"  {}", m).c_str());
+		}
+	}
+	return ret;
+}
+
+bool HorizontalAlignmentEntity::DrawIntermediateLine(const AcGiWorldDraw* pWorldDraw,
+                                                     const std::shared_ptr<VizRailCore::IntermediateLine>& jzx)
+{
+	bool ret = false;
+	const auto startPoint = jzx->StartPoint();
+	const auto endPoint = jzx->EndPoint();
+	AcGePoint3dArray tmp(2);
+	tmp.append({startPoint.X(), startPoint.Y(), 0});
+	tmp.append({endPoint.X(), endPoint.Y(), 0});
+
+	pWorldDraw->subEntityTraits().setLineWeight(AcDb::kLnWt050);
+	pWorldDraw->subEntityTraits().setColor(3);
+	ret = pWorldDraw->geometry().polyline(2, tmp.asArrayPtr());
+	DrawHectoMeter(pWorldDraw, jzx, jzx->StartMileage().Value(), jzx->EndMileage().Value());
+	return ret;
+}
+
+bool HorizontalAlignmentEntity::MileageMark(const AcGiWorldDraw* pWorldDraw, const AcGePoint3d& pt,
+                                            const VizRailCore::Angle& azimuthAngle, const AcString& str)
+{
+	AcGePoint3dArray tmp1(2);
+	const double dx = 10 * VizRailCore::Angle::Cos(azimuthAngle - VizRailCore::Angle::HalfPi());
+	const double dy = 10 * VizRailCore::Angle::Sin(azimuthAngle - VizRailCore::Angle::HalfPi());
+	tmp1[0] = pt;
+	tmp1[1] = {pt.x + dx, pt.y + dy, 0};
+	bool ret = pWorldDraw->geometry().polyline(2, tmp1.asArrayPtr());
+	const AcGeVector3d normal(0, 0, 1);
+	const AcGeVector3d direction(dx, dy, 0);
+	ret = pWorldDraw->geometry().text(tmp1[1], normal, direction, 7.0, 1,
+	                                  0, str);
+	return ret;
+}
+
+bool HorizontalAlignmentEntity::DrawCurve(const AcGiWorldDraw* pWorldDraw,
+                                          const std::shared_ptr<VizRailCore::Curve>& qx)
+{
+	bool ret = false;
+	const auto& mileageZH = qx->K(VizRailCore::SpecialPoint::ZH);
+	const auto& mileageHY = qx->K(VizRailCore::SpecialPoint::HY);
+	const auto& mileageYH = qx->K(VizRailCore::SpecialPoint::YH);
+	const auto& mileageHZ = qx->K(VizRailCore::SpecialPoint::HZ);
+	AcGePoint3dArray transitionTmp1;
+	AcGePoint3dArray transitionTmp2;
+	AcGePoint3dArray curveTmp;
+	const auto ZH = qx->MileageToCoordinate(mileageZH);
+	const auto aZH = qx->MileageToAzimuthAngle(mileageZH);
+	const auto HY = qx->MileageToCoordinate(mileageHY);
+	const auto aHY = qx->MileageToAzimuthAngle(mileageHY);
+	const auto YH = qx->MileageToCoordinate(mileageYH);
+	const auto aYH = qx->MileageToAzimuthAngle(mileageYH);
+	const auto HZ = qx->MileageToCoordinate(mileageHZ);
+	const auto aHZ = qx->MileageToAzimuthAngle(mileageHZ);
+
+	// 前缓和曲线
+	for (double j = mileageZH.Value(); j < mileageHY.Value(); ++j)
+	{
+		const auto coordinate = qx->MileageToCoordinate(j);
+		transitionTmp1.append({coordinate.X(), coordinate.Y(), 0});
+	}
+	transitionTmp1.append({HY.X(), HY.Y(), 0});
+
+	// 圆曲线部分
+	for (double j = mileageHY.Value(); j < mileageYH.Value(); ++j)
+	{
+		const auto coordinate = qx->MileageToCoordinate(j);
+		curveTmp.append({coordinate.X(), coordinate.Y(), 0});
+	}
+	curveTmp.append({YH.X(), YH.Y(), 0});
+
+	// 后缓和曲线
+	for (double j = mileageYH.Value(); j < mileageHZ.Value(); ++j)
+	{
+		const auto coordinate = qx->MileageToCoordinate(j);
+		transitionTmp2.append({coordinate.X(), coordinate.Y(), 0});
+	}
+	transitionTmp2.append({HZ.X(), HZ.Y(), 0});
+
+	// 绘图
+	pWorldDraw->subEntityTraits().setLineWeight(AcDb::kLnWt050);
+	pWorldDraw->subEntityTraits().setColor(2);
+	ret = pWorldDraw->geometry().polyline(transitionTmp1.length(), transitionTmp1.asArrayPtr());
+	ret = pWorldDraw->geometry().polyline(transitionTmp2.length(), transitionTmp2.asArrayPtr());
+
+	pWorldDraw->subEntityTraits().setColor(1);
+	ret = pWorldDraw->geometry().polyline(curveTmp.length(), curveTmp.asArrayPtr());
+	ret = DrawHectoMeter(pWorldDraw, qx, mileageZH.Value(), mileageHZ.Value());
+	ret =MileageMark(pWorldDraw, {ZH.X(), ZH.Y(), 0}, aZH, AcString(std::format(L" ZH {}", mileageZH.GetString())));
+	ret =MileageMark(pWorldDraw, {HY.X(), HY.Y(), 0}, aHY, AcString(std::format(L" HY {}", mileageHY.GetString())));
+	ret =MileageMark(pWorldDraw, {YH.X(), YH.Y(), 0}, aYH, AcString(std::format(L" YH {}", mileageYH.GetString())));
+	ret =MileageMark(pWorldDraw, {HZ.X(), HZ.Y(), 0}, aHZ, AcString(std::format(L" HZ {}", mileageHZ.GetString())));
+	return ret;
 }

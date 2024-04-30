@@ -27,6 +27,7 @@
 #include "HorizontalAlignmentEntity.h"
 #include "ProjectService.h"
 #include "resource.h"
+#include "Utils.h"
 #include "../VizRailCore/includes/DatabaseUtils.h"
 #include "../VizRailCore/includes/Exceptions.h"
 #include "../VizRailCore/includes/Jd.h"
@@ -162,6 +163,7 @@ public:
 			pBlockTable->close();
 			const auto ret = pBlockTableRecord->appendAcDbEntity(id, pEntity);
 			pBlockTableRecord->close();
+			SetView({jds[0].E, jds[0].N}, {jds[jds.size() - 1].E, jds[jds.size() - 1].N}, 1);
 			pEntity->close();
 		}
 		catch (AccessDatabaseException& e)

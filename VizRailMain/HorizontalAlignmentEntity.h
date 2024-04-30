@@ -2,12 +2,18 @@
 #include "../VizRailCore/includes/HorizontalAlignment.h"
 
 
+namespace VizRailCore
+{
+	class Curve;
+	class IntermediateLine;
+}
+
 class HorizontalAlignmentEntity final : public AcDbEntity
 {
 public:
 	ACRX_DECLARE_MEMBERS(HorizontalAlignmentEntity)
 	HorizontalAlignmentEntity() = default;
-	explicit HorizontalAlignmentEntity(const AcString& name,const std::vector<Jd>& jds);
+	explicit HorizontalAlignmentEntity(const AcString& name, const std::vector<Jd>& jds);
 	~HorizontalAlignmentEntity() override = default;
 
 
@@ -27,5 +33,13 @@ protected:
 
 private:
 	VizRailCore::HorizontalAlignment _horizontalAlignment;
+	static bool DrawHectoMeter(const AcGiWorldDraw* pWorldDraw,
+	                           const std::shared_ptr<VizRailCore::LineElement>& line,
+	                           const double startMileage, const double endMileage);
+	static bool DrawIntermediateLine(const AcGiWorldDraw* pWorldDraw,
+	                                 const std::shared_ptr<VizRailCore::IntermediateLine>& jzx);
+	static bool MileageMark(const AcGiWorldDraw* pWorldDraw, const AcGePoint3d& pt,
+	                        const VizRailCore::Angle& azimuthAngle, const AcString& str);
+	static bool DrawCurve(const AcGiWorldDraw* pWorldDraw, const std::shared_ptr<VizRailCore::Curve>& qx);
 	AcString _name;
 };
