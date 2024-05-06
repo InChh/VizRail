@@ -24,6 +24,8 @@
 //-----------------------------------------------------------------------------
 #include "StdAfx.h"
 
+#include <format>
+
 #include "HorizontalAlignmentEntity.h"
 #include "ProjectService.h"
 #include "resource.h"
@@ -187,7 +189,7 @@ public:
 		ads_point pt;
 		AcDbObjectId objId;
 		AcDbEntity* pEntity;
-		if (acedEntSel(L"\nSelect a horizontal alignment entity:", en, pt) != RTNORM)
+		if (acedEntSel(L"\n选择平面实体:", en, pt) != RTNORM)
 		{
 			return;
 		}
@@ -207,8 +209,43 @@ public:
 			return;
 		}
 
-		AcString path = ProjectService::GetMdbFilePath();
-		AccessConnection conn(path.constPtr());
+		try
+		{
+			const AcString path = ProjectService::GetMdbFilePath();
+			AccessConnection conn(path.constPtr());
+			const auto pHAEntity = static_cast<HorizontalAlignmentEntity*>(pEntity);
+			const auto jds = pHAEntity->HorizontalAlignment().GetJds();
+			conn.Execute(L"DELETE * FROM 曲线表");
+			for (const auto& jd : jds)
+			{
+				conn.Execute(std::format(
+					L"INSERT INTO 曲线表(交点号,坐标N,坐标E,偏角,曲线半径,前缓和曲线,后缓和曲线,前切线长,后切线长,曲线长,夹直线长,起点里程冠号,起点里程,终点里程冠号,终点里程) "
+					"VALUES("
+					"'{}',{},{},{},{},{},{},{},{},{},{},'AK',{},'AK',{})"
+					, jd.JdH, jd.N, jd.E, jd.Angle, jd.R, jd.Ls, jd.Ls, jd.TH, jd.TH, jd.LH, jd.LJzx, jd.StartMileage,
+					jd.EndMileage));
+			}
+		}
+		catch (AccessDatabaseException& e)
+		{
+			acutPrintf(L"%s", e.GetMsg().c_str());
+		}
+		catch (std::exception& e)
+		{
+			acutPrintf(L"%s", e.what());
+		}
+		catch (...)
+		{
+			acutPrintf(L"未知错误");
+		}
+	}
+
+	static void ADSKVizRailGroupAddJd()
+	{
+	}
+
+	static void ADSKVizRailGroupRemoveJd()
+	{
 	}
 };
 

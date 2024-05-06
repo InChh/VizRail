@@ -91,6 +91,7 @@ Adesk::Boolean HorizontalAlignmentEntity::subWorldDraw(AcGiWorldDraw* pWorldDraw
 			{
 				const auto qx = std::dynamic_pointer_cast<VizRailCore::Curve>(xy);
 				ret = DrawCurve(pWorldDraw, qx);
+				ret = DrawJdMark(pWorldDraw, qx);
 			}
 		}
 
@@ -322,4 +323,25 @@ bool HorizontalAlignmentEntity::DrawCurve(const AcGiWorldDraw* pWorldDraw,
 	ret = MileageMark(pWorldDraw, {YH.X(), YH.Y(), 0}, aYH, AcString(std::format(L" YH {}", mileageYH.GetString())));
 	ret = MileageMark(pWorldDraw, {HZ.X(), HZ.Y(), 0}, aHZ, AcString(std::format(L" HZ {}", mileageHZ.GetString())));
 	return ret;
+}
+
+bool HorizontalAlignmentEntity::DrawJdMark(AcGiWorldDraw* pWorldDraw, const std::shared_ptr<VizRailCore::Curve>& qx)
+{
+	pWorldDraw->subEntityTraits().setLineWeight(AcDb::kLnWt025);
+	pWorldDraw->subEntityTraits().setColor(0);
+	const auto mileageQZ = qx->K(VizRailCore::SpecialPoint::QZ);
+	const auto QZ = qx->MileageToCoordinate(mileageQZ);
+	const auto aQZ = qx->MileageToAzimuthAngle(mileageQZ);
+	const auto jd = qx->Jd2();
+	const double dx = 80 * VizRailCore::Angle::Cos(aQZ - VizRailCore::Angle::HalfPi());
+	const double dy = 80 * VizRailCore::Angle::Sin(aQZ - VizRailCore::Angle::HalfPi());
+	const AcGePoint3d point(jd.X() + dx, jd.Y() + dy, 0);
+	const AcGeVector3d normal(0, 0, 1);
+	const double dx1 = 80 * VizRailCore::Angle::Cos(aQZ + VizRailCore::Angle::Pi());
+	const double dy1 = 80 * VizRailCore::Angle::Sin(aQZ + VizRailCore::Angle::Pi());
+	const AcGeVector3d direction(dx1,dy1,0);
+	AcString str;
+	str.format(L"R=%f \tLs=%f \r\nL=%f \tT=%f\r\n", qx->R(), qx->Ls(), qx->L_H(), qx->T_H());
+	return pWorldDraw->geometry().text(point, normal, direction, 7.0, 1,
+	                                   0, str);
 }

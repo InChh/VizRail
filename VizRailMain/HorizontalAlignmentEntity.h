@@ -31,6 +31,17 @@ protected:
 	Acad::ErrorStatus subMoveGripPointsAt(const AcDbIntArray& indices, const AcGeVector3d& offset) override;
 	Acad::ErrorStatus subGetGeomExtents(AcDbExtents& extents) const override;
 
+public:
+	[[nodiscard]] VizRailCore::HorizontalAlignment HorizontalAlignment() const
+	{
+		return _horizontalAlignment;
+	}
+
+	[[nodiscard]] AcString Name() const
+	{
+		return _name;
+	}
+
 private:
 	VizRailCore::HorizontalAlignment _horizontalAlignment;
 	static bool DrawHectoMeter(const AcGiWorldDraw* pWorldDraw,
@@ -41,5 +52,7 @@ private:
 	static bool MileageMark(const AcGiWorldDraw* pWorldDraw, const AcGePoint3d& pt,
 	                        const VizRailCore::Angle& azimuthAngle, const AcString& str);
 	static bool DrawCurve(const AcGiWorldDraw* pWorldDraw, const std::shared_ptr<VizRailCore::Curve>& qx);
+
+	static bool DrawJdMark(AcGiWorldDraw* pWorldDraw, const std::shared_ptr<VizRailCore::Curve>& qx);
 	AcString _name;
 };

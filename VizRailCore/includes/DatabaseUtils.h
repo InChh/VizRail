@@ -2,6 +2,7 @@
 #include <string>
 
 #import "c:\\program files\\common files\\system\\ado\\msado15.dll" named_guids rename_namespace("ADOCG") rename("EOF", "EndOfFile") rename("BOF","FirstOfFile") rename("EOS","EndOfStream")
+#import "c:\\Program Files\\Common Files\\system\\ado\\msadox.dll" no_namespace
 using namespace ADOCG;
 
 class AccessRecordset
@@ -30,6 +31,7 @@ public:
 	AccessConnection();
 	~AccessConnection();
 
+	static void CreateDatabase(const std::wstring& dbFilePath);
 	void Open(const std::wstring& dbFilePath);
 	void Close();
 	AccessRecordset Execute(const std::wstring& sql);

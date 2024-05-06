@@ -1,8 +1,11 @@
 #include "DatabaseUtils.h"
 
+#include <filesystem>
 #include <format>
 
 #include "Exceptions.h"
+
+inline void TESTHR(HRESULT x) { if FAILED(x) _com_issue_error(x); };
 
 AccessRecordset::AccessRecordset(const _RecordsetPtr& pRecordSet): _pRecordset(pRecordSet)
 {
@@ -55,8 +58,49 @@ AccessConnection::~AccessConnection()
 	CoUninitialize();
 }
 
+void AccessConnection::CreateDatabase(const std::wstring& dbFilePath)
+{
+	try
+	{
+		// Create database
+		_CatalogPtr pCatalog;
+		TESTHR(pCatalog.CreateInstance(__uuidof(Catalog)));
+		pCatalog->Create((L"Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" + dbFilePath).c_str());
+		_TablePtr pTable;
+		TESTHR(pTable.CreateInstance(_uuidof(Table)));
+		pTable->PutName(L"曲线表");
+		pTable->Columns->Append(L"交点号", ::adVarWChar, 10);
+		pTable->Columns->Append(L"坐标N", ::adDouble, 0);
+		pTable->Columns->Append(L"坐标E", ::adDouble, 0);
+		pTable->Columns->Append(L"偏角", ::adDouble, 0);
+		pTable->Columns->Append(L"曲线半径", ::adDouble, 0);
+		pTable->Columns->Append(L"前缓和曲线", ::adDouble, 0);
+		pTable->Columns->Append(L"后缓和曲线", ::adDouble, 0);
+		pTable->Columns->Append(L"前切线长", ::adDouble, 0);
+		pTable->Columns->Append(L"后切线长", ::adDouble, 0);
+		pTable->Columns->Append(L"曲线长", ::adDouble, 0);
+		pTable->Columns->Append(L"夹直线长", ::adDouble, 0);
+		pTable->Columns->Append(L"起点里程冠号", ::adVarWChar, 10);
+		pTable->Columns->Append(L"起点里程", ::adDouble, 0);
+		pTable->Columns->Append(L"终点里程冠号", ::adVarWChar, 10);
+		pTable->Columns->Append(L"终点里程", ::adDouble, 0);
+		pCatalog->Tables->Append(_variant_t((IDispatch*)pTable));
+	}
+	catch (_com_error& e)
+	{
+		throw AccessDatabaseException(std::format(L"创建数据库失败:{}({})", std::wstring(e.Description()),
+		                                          std::wstring(e.Source())));
+	}
+}
+
 void AccessConnection::Open(const std::wstring& dbFilePath)
 {
+	// 检查文件是否存在
+	if (!std::filesystem::exists(dbFilePath))
+	{
+		// 创建数据库
+		CreateDatabase(dbFilePath);
+	}
 	try
 	{
 		// Create connection
