@@ -238,6 +238,7 @@ public:
 		{
 			acutPrintf(L"未知错误");
 		}
+		pEntity->close();
 	}
 
 	static void ADSKVizRailGroupAddJd()

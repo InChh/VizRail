@@ -234,9 +234,11 @@ Angle Curve::MileageToAzimuthAngle(const Mileage& mileage) const
 		return aZH + Angle::FromRadian(((li * li) / (2 * _r * _ls)).Value() * G);
 	case PointLocation::HY2QZ:
 	case PointLocation::QZ:
-	case PointLocation::QZ2YH:
-		// 圆曲线
+		// 圆曲线前半
 		return aZH + Angle::FromRadian(((li - _ls) / _r + _ls / (2 * _r)).Value() * G);
+	case PointLocation::QZ2YH:
+		// 圆曲线后半
+		return aHZ - Angle::FromRadian(((li - _ls) / _r + _ls / (2 * _r)).Value() * G);
 	case PointLocation::YH:
 	case PointLocation::YH2HZ:
 		// 后缓和曲线
