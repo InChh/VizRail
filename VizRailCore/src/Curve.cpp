@@ -77,7 +77,7 @@ Mileage Curve::K(const SpecialPoint specialPoint) const
 	case SpecialPoint::HZ:
 		return K(SpecialPoint::YH) + _ls;
 	}
-	throw std::invalid_argument("");
+	throw VizRailCoreException(L"主点里程转换未知错误");
 }
 
 bool Curve::IsOnIt(const Mileage& mileage) const
@@ -118,7 +118,7 @@ Mileage Curve::CalculateDistance(const Mileage& mileage, const PointLocation poi
 	return li;
 }
 
-Point2D Curve::CalculateLocalCoordinate(const Mileage& li, const Curve::PointLocation pointLocation) const
+Point2D Curve::CalculateLocalCoordinate(const Mileage& li, const PointLocation pointLocation) const
 {
 	double xi = 0.0;
 	double yi = 0.0;
@@ -158,7 +158,7 @@ Point2D Curve::MileageToCoordinate(const Mileage& mileage) const
 	const PointLocation pointLocation = GetPointLocation(mileage);
 	if (pointLocation == PointLocation::NotInCurve)
 	{
-		throw std::invalid_argument("mileage is not in this curve");
+		throw VizRailCoreException(L"里程不在该曲线上");
 	}
 
 	// 计算局部坐标

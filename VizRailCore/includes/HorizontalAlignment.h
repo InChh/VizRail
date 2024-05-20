@@ -4,7 +4,6 @@
 #include <string>
 #include <vector>
 
-#include "Angle.h"
 #include "Jd.h"
 #include "LineElement.h"
 

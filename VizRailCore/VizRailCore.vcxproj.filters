@@ -16,6 +16,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="vcpkg.json" />
+    <None Include="ClassDiagram.cd" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="includes\Angle.h">
@@ -51,7 +52,7 @@
     <ClCompile Include="includes\Coordinate.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="includes\Jd.cpp">
+    <ClCompile Include="src\Jd.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

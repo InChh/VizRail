@@ -155,6 +155,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <None Include="ClassDiagram.cd" />
     <None Include="vcpkg.json" />
   </ItemGroup>
   <ItemGroup>
@@ -162,7 +163,7 @@
     <ClCompile Include="includes\Coordinate.cpp" />
     <ClCompile Include="includes\Coordinate.h" />
     <ClCompile Include="includes\Curve.h" />
-    <ClCompile Include="includes\Jd.cpp" />
+    <ClCompile Include="src\Jd.cpp" />
     <ClCompile Include="src\HorizontalAlignment.cpp" />
     <ClCompile Include="src\LineElement.cpp" />
     <ClCompile Include="src\Curve.cpp" />
