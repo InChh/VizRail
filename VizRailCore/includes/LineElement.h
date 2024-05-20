@@ -1,4 +1,5 @@
 #pragma once
+#include "Angle.h"
 #include "Coordinate.h"
 #include "Mileage.h"
 
